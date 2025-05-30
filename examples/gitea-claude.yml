@@ -1,0 +1,43 @@
+name: Claude Assistant for Gitea
+
+on:
+  # Trigger on issue comments (works on both issues and pull requests in Gitea)
+  issue_comment:
+    types: [created]
+  # Trigger on issues being opened or assigned
+  issues:
+    types: [opened, assigned]
+  # Note: pull_request_review_comment has limited support in Gitea
+  # Use issue_comment instead which covers PR comments
+
+jobs:
+  claude-assistant:
+    # Basic trigger detection - check for @claude in comments or issue body
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || github.event.action == 'assigned'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      # Note: Gitea Actions may not require id-token: write for basic functionality
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Claude Assistant
+        uses: ./  # Use local action (adjust path as needed)
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}  # Use standard workflow token
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          timeout_minutes: "60"
+          trigger_phrase: "@claude"
+          # Optional: Customize for Gitea environment
+          custom_instructions: |
+            You are working in a Gitea environment. Be aware that:
+            - Some GitHub Actions features may behave differently
+            - Focus on core functionality and avoid advanced GitHub-specific features
+            - Use standard git operations when possible

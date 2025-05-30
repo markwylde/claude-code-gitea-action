@@ -45,7 +45,7 @@ inputs:
     description: "Anthropic API key (required for direct API, not needed for Bedrock/Vertex)"
     required: false
   github_token:
-    description: "GitHub token with repo and pull request permissions (optional if using GitHub App)"
+    description: "GitHub token with repo and pull request permissions (defaults to GITHUB_TOKEN)"
     required: false
   use_bedrock:
     description: "Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API"
@@ -93,44 +93,42 @@ runs:
         CUSTOM_INSTRUCTIONS: ${{ inputs.custom_instructions }}
         DIRECT_PROMPT: ${{ inputs.direct_prompt }}
         OVERRIDE_GITHUB_TOKEN: ${{ inputs.github_token }}
+        GITHUB_TOKEN: ${{ github.token }}
         GITHUB_RUN_ID: ${{ github.run_id }}
 
     - name: Run Claude Code
       id: claude-code
       if: steps.prepare.outputs.contains_trigger == 'true'
-      uses: anthropics/claude-code-base-action@c8e31bd52d9a149b3f8309d7978c6edaa282688d # v0.0.8
-      with:
-        prompt_file: /tmp/claude-prompts/claude-prompt.txt
-        allowed_tools: ${{ env.ALLOWED_TOOLS }}
-        disallowed_tools: ${{ env.DISALLOWED_TOOLS }}
-        timeout_minutes: ${{ inputs.timeout_minutes }}
-        model: ${{ inputs.model || inputs.anthropic_model }}
-        mcp_config: ${{ steps.prepare.outputs.mcp_config }}
-        use_bedrock: ${{ inputs.use_bedrock }}
-        use_vertex: ${{ inputs.use_vertex }}
-        anthropic_api_key: ${{ inputs.anthropic_api_key }}
+      shell: bash
+      run: |
+        bun run ${{ github.action_path }}/src/entrypoints/execute-claude.ts
       env:
-        # Model configuration
+        # Core configuration
+        PROMPT_FILE: /tmp/claude-prompts/claude-prompt.txt
+        ALLOWED_TOOLS: ${{ env.ALLOWED_TOOLS }}
+        DISALLOWED_TOOLS: ${{ env.DISALLOWED_TOOLS }}
+        TIMEOUT_MINUTES: ${{ inputs.timeout_minutes }}
+        MODEL: ${{ inputs.model || inputs.anthropic_model }}
         ANTHROPIC_MODEL: ${{ inputs.model || inputs.anthropic_model }}
+        MCP_CONFIG: ${{ steps.prepare.outputs.mcp_config }}
+        USE_BEDROCK: ${{ inputs.use_bedrock }}
+        USE_VERTEX: ${{ inputs.use_vertex }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        
+        # GitHub token for repository access
         GITHUB_TOKEN: ${{ steps.prepare.outputs.GITHUB_TOKEN }}
 
-        # Provider configuration
+        # Provider configuration (for future cloud provider support)
         ANTHROPIC_BASE_URL: ${{ env.ANTHROPIC_BASE_URL }}
-
-        # AWS configuration
         AWS_REGION: ${{ env.AWS_REGION }}
         AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
         AWS_SESSION_TOKEN: ${{ env.AWS_SESSION_TOKEN }}
         ANTHROPIC_BEDROCK_BASE_URL: ${{ env.ANTHROPIC_BEDROCK_BASE_URL }}
-
-        # GCP configuration
         ANTHROPIC_VERTEX_PROJECT_ID: ${{ env.ANTHROPIC_VERTEX_PROJECT_ID }}
         CLOUD_ML_REGION: ${{ env.CLOUD_ML_REGION }}
         GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
         ANTHROPIC_VERTEX_BASE_URL: ${{ env.ANTHROPIC_VERTEX_BASE_URL }}
-
-        # Model-specific regions for Vertex
         VERTEX_REGION_CLAUDE_3_5_HAIKU: ${{ env.VERTEX_REGION_CLAUDE_3_5_HAIKU }}
         VERTEX_REGION_CLAUDE_3_5_SONNET: ${{ env.VERTEX_REGION_CLAUDE_3_5_SONNET }}
         VERTEX_REGION_CLAUDE_3_7_SONNET: ${{ env.VERTEX_REGION_CLAUDE_3_7_SONNET }}
@@ -166,13 +164,3 @@ runs:
         cat "${{ steps.claude-code.outputs.execution_file }}" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
 
-    - name: Revoke app token
-      if: always() && inputs.github_token == ''
-      shell: bash
-      run: |
-        curl -L \
-          -X DELETE \
-          -H "Accept: application/vnd.github+json" \
-          -H "Authorization: Bearer ${{ steps.prepare.outputs.GITHUB_TOKEN }}" \
-          -H "X-GitHub-Api-Version: 2022-11-28" \
-          ${GITHUB_API_URL:-https://api.github.com}/installation/token
