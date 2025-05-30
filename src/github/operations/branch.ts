@@ -121,27 +121,40 @@ export async function setupBranch(
 
     console.log(`Current SHA: ${currentSHA}`);
 
-    // Create branch - try GitHub API first
-    try {
-      await octokits.rest.git.createRef({
-        owner,
-        repo,
-        ref: `refs/heads/${newBranch}`,
-        sha: currentSHA,
-      });
+    // Check if we're in a Gitea environment
+    const isGitea =
+      process.env.GITHUB_API_URL &&
+      !process.env.GITHUB_API_URL.includes("api.github.com");
 
-      console.log(`Successfully created branch via API: ${newBranch}`);
-    } catch (createRefError: any) {
-      // If git/refs creation fails (like in Gitea), that's expected
-      // Log the error details but continue - the branch will be created when we push files
+    if (isGitea) {
+      // Gitea doesn't reliably support git.createRef, skip it
       console.log(
-        `git createRef failed (expected for Gitea): ${createRefError.message}`,
+        `Detected Gitea environment, skipping git.createRef for branch: ${newBranch}`,
       );
-      console.log(`Error status: ${createRefError.status}`);
-      console.log(`Branch ${newBranch} will be created when files are pushed`);
+      console.log(
+        `Branch ${newBranch} will be created when files are pushed via MCP server`,
+      );
+    } else {
+      // GitHub environment - try to create branch via API
+      try {
+        await octokits.rest.git.createRef({
+          owner,
+          repo,
+          ref: `refs/heads/${newBranch}`,
+          sha: currentSHA,
+        });
 
-      // For Gitea, we can still proceed since the MCP server will create the branch on first push
-      // This is actually the preferred method for Gitea
+        console.log(`Successfully created branch via API: ${newBranch}`);
+      } catch (createRefError: any) {
+        // If creation fails on GitHub, log but continue
+        console.log(
+          `git createRef failed on GitHub: ${createRefError.message}`,
+        );
+        console.log(`Error status: ${createRefError.status}`);
+        console.log(
+          `Branch ${newBranch} will be created when files are pushed`,
+        );
+      }
     }
 
     console.log(`Branch setup completed for: ${newBranch}`);

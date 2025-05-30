@@ -107,39 +107,18 @@ async function run() {
       const containsPRUrl = currentBody.match(prUrlPattern);
 
       if (!containsPRUrl) {
-        // Check if there are changes to the branch compared to the default branch
-        try {
-          const { data: comparison } =
-            await octokit.rest.repos.compareCommitsWithBasehead({
-              owner,
-              repo,
-              basehead: `${baseBranch}...${claudeBranch}`,
-            });
+        // Check if we're in a Gitea environment
+        const isGitea =
+          process.env.GITHUB_API_URL &&
+          !process.env.GITHUB_API_URL.includes("api.github.com");
 
-          // If there are changes (commits or file changes), add the PR URL
-          if (
-            comparison.total_commits > 0 ||
-            (comparison.files && comparison.files.length > 0)
-          ) {
-            const entityType = context.isPR ? "PR" : "Issue";
-            const prTitle = encodeURIComponent(
-              `${entityType} #${context.entityNumber}: Changes from Claude`,
-            );
-            const prBody = encodeURIComponent(
-              `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
-            );
-            const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
-            prLink = `\n[Create a PR](${prUrl})`;
-          }
-        } catch (error) {
-          console.error("Error checking for changes in branch:", error);
+        if (isGitea) {
+          // Gitea doesn't support the /compare endpoint, use direct SHA comparison
+          console.log(
+            "Detected Gitea environment, using SHA comparison for PR link check",
+          );
 
-          // For Gitea compatibility, try alternative approach
           try {
-            console.log(
-              "Trying alternative branch comparison for Gitea compatibility...",
-            );
-
             // Get the branch info to see if it exists and has commits
             const branchResponse = await octokit.rest.repos.getBranch({
               owner,
@@ -176,15 +155,10 @@ async function run() {
                 `Branch ${claudeBranch} has same SHA as base, no PR link needed`,
               );
             }
-          } catch (fallbackError) {
-            console.error(
-              "Fallback branch comparison also failed:",
-              fallbackError,
-            );
-            // If all checks fail, still add PR link to be safe
-            console.log(
-              "Adding PR link as fallback since we can't determine branch status",
-            );
+          } catch (error) {
+            console.error("Error checking branch in Gitea:", error);
+            // If we can't check in Gitea, add PR link to be safe
+            console.log("Adding PR link as fallback for Gitea");
             const entityType = context.isPR ? "PR" : "Issue";
             const prTitle = encodeURIComponent(
               `${entityType} #${context.entityNumber}: Changes from Claude`,
@@ -194,6 +168,85 @@ async function run() {
             );
             const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
             prLink = `\n[Create a PR](${prUrl})`;
+          }
+        } else {
+          // GitHub environment - use the comparison API
+          try {
+            const { data: comparison } =
+              await octokit.rest.repos.compareCommitsWithBasehead({
+                owner,
+                repo,
+                basehead: `${baseBranch}...${claudeBranch}`,
+              });
+
+            // If there are changes (commits or file changes), add the PR URL
+            if (
+              comparison.total_commits > 0 ||
+              (comparison.files && comparison.files.length > 0)
+            ) {
+              const entityType = context.isPR ? "PR" : "Issue";
+              const prTitle = encodeURIComponent(
+                `${entityType} #${context.entityNumber}: Changes from Claude`,
+              );
+              const prBody = encodeURIComponent(
+                `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
+              );
+              const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
+              prLink = `\n[Create a PR](${prUrl})`;
+            }
+          } catch (error) {
+            console.error("Error checking for changes in branch:", error);
+
+            // Fallback to SHA comparison even on GitHub if API fails
+            try {
+              console.log(
+                "GitHub comparison API failed, falling back to SHA comparison",
+              );
+
+              const branchResponse = await octokit.rest.repos.getBranch({
+                owner,
+                repo,
+                branch: claudeBranch,
+              });
+
+              const baseResponse = await octokit.rest.repos.getBranch({
+                owner,
+                repo,
+                branch: baseBranch,
+              });
+
+              const branchSha = branchResponse.data.commit.sha;
+              const baseSha = baseResponse.data.commit.sha;
+
+              // If SHAs are different, assume there are changes and add PR link
+              if (branchSha !== baseSha) {
+                const entityType = context.isPR ? "PR" : "Issue";
+                const prTitle = encodeURIComponent(
+                  `${entityType} #${context.entityNumber}: Changes from Claude`,
+                );
+                const prBody = encodeURIComponent(
+                  `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
+                );
+                const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
+                prLink = `\n[Create a PR](${prUrl})`;
+              }
+            } catch (fallbackError) {
+              console.error(
+                "Fallback branch comparison also failed:",
+                fallbackError,
+              );
+              // If all checks fail, still add PR link to be safe
+              console.log("Adding PR link as final fallback");
+              const entityType = context.isPR ? "PR" : "Issue";
+              const prTitle = encodeURIComponent(
+                `${entityType} #${context.entityNumber}: Changes from Claude`,
+              );
+              const prBody = encodeURIComponent(
+                `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
+              );
+              const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
+              prLink = `\n[Create a PR](${prUrl})`;
+            }
           }
         }
       }
