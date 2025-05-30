@@ -122,28 +122,25 @@ export async function setupBranch(
 
       // Verify the branch was created
       const currentBranch = await $`git branch --show-current`;
-      console.log(
-        `Current branch after creation: ${currentBranch.stdout.trim()}`,
-      );
+      const branchName = currentBranch.toString().trim();
+      console.log(`Current branch after creation: ${branchName}`);
 
-      if (currentBranch.stdout.trim() === newBranch) {
+      if (branchName === newBranch) {
         console.log(
           `✅ Successfully created and checked out branch: ${newBranch}`,
         );
       } else {
         throw new Error(
-          `Branch creation failed. Expected ${newBranch}, got ${currentBranch.stdout.trim()}`,
+          `Branch creation failed. Expected ${newBranch}, got ${branchName}`,
         );
       }
     } catch (gitError: any) {
       console.error(`❌ Git operations failed:`, gitError);
-      console.error(`Error message: ${gitError.message}`);
-      console.error(`Error stdout: ${gitError.stdout}`);
-      console.error(`Error stderr: ${gitError.stderr}`);
+      console.error(`Error message: ${gitError.message || gitError}`);
 
       // This is a critical failure - the branch MUST be created for Claude to work
       throw new Error(
-        `Failed to create branch ${newBranch}: ${gitError.message}`,
+        `Failed to create branch ${newBranch}: ${gitError.message || gitError}`,
       );
     }
 
