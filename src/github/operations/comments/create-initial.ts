@@ -11,10 +11,10 @@ import {
   isPullRequestReviewCommentEvent,
   type ParsedGitHubContext,
 } from "../../context";
-import type { Octokit } from "@octokit/rest";
+import type { GiteaApiClient } from "../../api/gitea-client";
 
 export async function createInitialComment(
-  octokit: Octokit,
+  api: GiteaApiClient,
   context: ParsedGitHubContext,
 ) {
   const { owner, repo } = context.repository;
@@ -27,21 +27,12 @@ export async function createInitialComment(
 
     // Only use createReplyForReviewComment if it's a PR review comment AND we have a comment_id
     if (isPullRequestReviewCommentEvent(context)) {
-      response = await octokit.rest.pulls.createReplyForReviewComment({
-        owner,
-        repo,
-        pull_number: context.entityNumber,
-        comment_id: context.payload.comment.id,
+      response = await api.customRequest("POST", `/api/v1/repos/${owner}/${repo}/pulls/${context.entityNumber}/comments/${context.payload.comment.id}/replies`, {
         body: initialBody,
       });
     } else {
       // For all other cases (issues, issue comments, or missing comment_id)
-      response = await octokit.rest.issues.createComment({
-        owner,
-        repo,
-        issue_number: context.entityNumber,
-        body: initialBody,
-      });
+      response = await api.createIssueComment(owner, repo, context.entityNumber, initialBody);
     }
 
     // Output the comment ID for downstream steps using GITHUB_OUTPUT
@@ -54,12 +45,7 @@ export async function createInitialComment(
 
     // Always fall back to regular issue comment if anything fails
     try {
-      const response = await octokit.rest.issues.createComment({
-        owner,
-        repo,
-        issue_number: context.entityNumber,
-        body: initialBody,
-      });
+      const response = await api.createIssueComment(owner, repo, context.entityNumber, initialBody);
 
       const githubOutput = process.env.GITHUB_OUTPUT!;
       appendFileSync(githubOutput, `claude_comment_id=${response.data.id}\n`);

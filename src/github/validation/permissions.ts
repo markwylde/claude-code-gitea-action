@@ -1,15 +1,15 @@
 import * as core from "@actions/core";
 import type { ParsedGitHubContext } from "../context";
-import type { Octokit } from "@octokit/rest";
+import type { GiteaApiClient } from "../api/gitea-client";
 
 /**
  * Check if the actor has write permissions to the repository
- * @param octokit - The Octokit REST client
+ * @param api - The Gitea API client
  * @param context - The GitHub context
  * @returns true if the actor has write permissions, false otherwise
  */
 export async function checkWritePermissions(
-  octokit: Octokit,
+  api: GiteaApiClient,
   context: ParsedGitHubContext,
 ): Promise<boolean> {
   const { repository, actor } = context;
@@ -28,11 +28,7 @@ export async function checkWritePermissions(
     core.info(`Checking permissions for actor: ${actor}`);
 
     // Check permissions directly using the permission endpoint
-    const response = await octokit.repos.getCollaboratorPermissionLevel({
-      owner: repository.owner,
-      repo: repository.repo,
-      username: actor,
-    });
+    const response = await api.customRequest("GET", `/api/v1/repos/${repository.owner}/${repository.repo}/collaborators/${actor}/permission`);
 
     const permissionLevel = response.data.permission;
     core.info(`Permission level retrieved: ${permissionLevel}`);

@@ -1,23 +1,11 @@
-import { Octokit } from "@octokit/rest";
-import { graphql } from "@octokit/graphql";
-import { GITHUB_API_URL } from "./config";
+import { GiteaApiClient, createGiteaClient } from "./gitea-client";
 
-export type Octokits = {
-  rest: Octokit;
-  graphql: typeof graphql;
+export type GitHubClient = {
+  api: GiteaApiClient;
 };
 
-export function createOctokit(token: string): Octokits {
+export function createClient(token: string): GitHubClient {
   return {
-    rest: new Octokit({
-      auth: token,
-      baseUrl: GITHUB_API_URL,
-    }),
-    graphql: graphql.defaults({
-      baseUrl: GITHUB_API_URL,
-      headers: {
-        authorization: `token ${token}`,
-      },
-    }),
+    api: createGiteaClient(token),
   };
 }

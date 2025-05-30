@@ -10,14 +10,14 @@ import {
   createBranchLink,
   createCommentBody,
 } from "./common";
-import { type Octokits } from "../../api/client";
+import { type GitHubClient } from "../../api/client";
 import {
   isPullRequestReviewCommentEvent,
   type ParsedGitHubContext,
 } from "../../context";
 
 export async function updateTrackingComment(
-  octokit: Octokits,
+  client: GitHubClient,
   context: ParsedGitHubContext,
   commentId: number,
   branch?: string,
@@ -38,21 +38,13 @@ export async function updateTrackingComment(
   try {
     if (isPullRequestReviewCommentEvent(context)) {
       // For PR review comments (inline comments), use the pulls API
-      await octokit.rest.pulls.updateReviewComment({
-        owner,
-        repo,
-        comment_id: commentId,
+      await client.api.customRequest("PATCH", `/api/v1/repos/${owner}/${repo}/pulls/comments/${commentId}`, {
         body: updatedBody,
       });
       console.log(`✅ Updated PR review comment ${commentId} with branch link`);
     } else {
       // For all other comments, use the issues API
-      await octokit.rest.issues.updateComment({
-        owner,
-        repo,
-        comment_id: commentId,
-        body: updatedBody,
-      });
+      await client.api.updateIssueComment(owner, repo, commentId, updatedBody);
       console.log(`✅ Updated issue comment ${commentId} with branch link`);
     }
   } catch (error) {

@@ -10,7 +10,7 @@ import { $ } from "bun";
 import * as core from "@actions/core";
 import type { ParsedGitHubContext } from "../context";
 import type { GitHubPullRequest } from "../types";
-import type { Octokits } from "../api/client";
+import type { GitHubClient } from "../api/client";
 import type { FetchDataResult } from "../data/fetcher";
 
 export type BranchInfo = {
@@ -20,7 +20,7 @@ export type BranchInfo = {
 };
 
 export async function setupBranch(
-  octokits: Octokits,
+  client: GitHubClient,
   githubData: FetchDataResult,
   context: ParsedGitHubContext,
 ): Promise<BranchInfo> {
@@ -70,10 +70,7 @@ export async function setupBranch(
     sourceBranch = baseBranch;
   } else {
     // No base branch provided, fetch the default branch to use as source
-    const repoResponse = await octokits.rest.repos.get({
-      owner,
-      repo,
-    });
+    const repoResponse = await client.api.getRepo(owner, repo);
     sourceBranch = repoResponse.data.default_branch;
   }
 
@@ -93,85 +90,29 @@ export async function setupBranch(
   const newBranch = `claude/${entityType}-${entityNumber}-${timestamp}`;
 
   try {
-    // Get the SHA of the source branch
-    // For Gitea, try using the branches endpoint instead of git/refs
-    let currentSHA: string;
-
+    // Get the SHA of the source branch using Gitea's branches endpoint
+    console.log(`Getting branch info for: ${sourceBranch}`);
+    
     try {
-      // First try the GitHub-compatible git.getRef approach
-      const sourceBranchRef = await octokits.rest.git.getRef({
-        owner,
-        repo,
-        ref: `heads/${sourceBranch}`,
-      });
-      currentSHA = sourceBranchRef.data.object.sha;
-    } catch (gitRefError: any) {
-      // If git/refs fails (like in Gitea), use the branches endpoint
-      console.log(
-        `git/refs failed, trying branches endpoint: ${gitRefError.message}`,
-      );
-      const branchResponse = await octokits.rest.repos.getBranch({
-        owner,
-        repo,
-        branch: sourceBranch,
-      });
-      // GitHub and Gitea both use commit.sha
-      currentSHA = branchResponse.data.commit.sha;
+      const branchResponse = await client.api.getBranch(owner, repo, sourceBranch);
+      const currentSHA = branchResponse.data.commit.sha;
+      console.log(`Current SHA: ${currentSHA}`);
+    } catch (branchError: any) {
+      console.log(`Failed to get branch info: ${branchError.message}`);
     }
 
-    console.log(`Current SHA: ${currentSHA}`);
+    // Create branch using Gitea's branch creation API
+    console.log(`Creating branch: ${newBranch} from: ${sourceBranch}`);
 
-    // Try to create branch using the appropriate method for each platform
-    const isGitea =
-      process.env.GITHUB_API_URL &&
-      !process.env.GITHUB_API_URL.includes("api.github.com");
-
-    if (isGitea) {
-      // Gitea supports POST /repos/{owner}/{repo}/branches
+    try {
+      await client.api.createBranch(owner, repo, newBranch, sourceBranch);
+      console.log(`Successfully created branch via Gitea API: ${newBranch}`);
+    } catch (createBranchError: any) {
+      console.log(`Branch creation failed: ${createBranchError.message}`);
+      console.log(`Error status: ${createBranchError.status}`);
       console.log(
-        `Detected Gitea environment, using branches API for: ${newBranch}`,
+        `Branch ${newBranch} will be created when files are pushed via MCP server`,
       );
-
-      try {
-        // Use the raw Gitea API since Octokit might not have the createBranch method
-        await octokits.rest.request("POST /repos/{owner}/{repo}/branches", {
-          owner,
-          repo,
-          new_branch_name: newBranch,
-          old_branch_name: sourceBranch,
-        });
-        console.log(
-          `Successfully created branch via Gitea branches API: ${newBranch}`,
-        );
-      } catch (createBranchError: any) {
-        console.log(
-          `Gitea branch creation failed: ${createBranchError.message}`,
-        );
-        console.log(`Error status: ${createBranchError.status}`);
-        console.log(
-          `Branch ${newBranch} will be created when files are pushed via MCP server`,
-        );
-      }
-    } else {
-      // GitHub environment - use git.createRef
-      try {
-        await octokits.rest.git.createRef({
-          owner,
-          repo,
-          ref: `refs/heads/${newBranch}`,
-          sha: currentSHA,
-        });
-
-        console.log(
-          `Successfully created branch via GitHub git.createRef: ${newBranch}`,
-        );
-      } catch (createRefError: any) {
-        console.log(`GitHub git.createRef failed: ${createRefError.message}`);
-        console.log(`Error status: ${createRefError.status}`);
-        console.log(
-          `Branch ${newBranch} will be created when files are pushed`,
-        );
-      }
     }
 
     console.log(`Branch setup completed for: ${newBranch}`);

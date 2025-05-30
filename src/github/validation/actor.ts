@@ -5,11 +5,11 @@
  * Prevents automated tools or bots from triggering Claude
  */
 
-import type { Octokit } from "@octokit/rest";
+import type { GiteaApiClient } from "../api/gitea-client";
 import type { ParsedGitHubContext } from "../context";
 
 export async function checkHumanActor(
-  octokit: Octokit,
+  api: GiteaApiClient,
   githubContext: ParsedGitHubContext,
 ) {
   // Check if we're in a Gitea environment
@@ -26,9 +26,8 @@ export async function checkHumanActor(
 
   try {
     // Fetch user information from GitHub API
-    const { data: userData } = await octokit.users.getByUsername({
-      username: githubContext.actor,
-    });
+    const response = await api.customRequest("GET", `/api/v1/users/${githubContext.actor}`);
+    const userData = response.data;
 
     const actorType = userData.type;
 
