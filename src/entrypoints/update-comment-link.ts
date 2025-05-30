@@ -155,19 +155,31 @@ async function run() {
                 `Branch ${claudeBranch} has same SHA as base, no PR link needed`,
               );
             }
-          } catch (error) {
+          } catch (error: any) {
             console.error("Error checking branch in Gitea:", error);
-            // If we can't check in Gitea, add PR link to be safe
-            console.log("Adding PR link as fallback for Gitea");
-            const entityType = context.isPR ? "PR" : "Issue";
-            const prTitle = encodeURIComponent(
-              `${entityType} #${context.entityNumber}: Changes from Claude`,
-            );
-            const prBody = encodeURIComponent(
-              `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
-            );
-            const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
-            prLink = `\n[Create a PR](${prUrl})`;
+
+            // Handle 404 specifically - branch doesn't exist
+            if (error.status === 404) {
+              console.log(
+                `Branch ${claudeBranch} does not exist yet - no PR link needed`,
+              );
+              // Don't add PR link since branch doesn't exist
+              prLink = "";
+            } else {
+              // For other errors, add PR link to be safe
+              console.log(
+                "Adding PR link as fallback for Gitea due to non-404 error",
+              );
+              const entityType = context.isPR ? "PR" : "Issue";
+              const prTitle = encodeURIComponent(
+                `${entityType} #${context.entityNumber}: Changes from Claude`,
+              );
+              const prBody = encodeURIComponent(
+                `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
+              );
+              const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
+              prLink = `\n[Create a PR](${prUrl})`;
+            }
           }
         } else {
           // GitHub environment - use the comparison API

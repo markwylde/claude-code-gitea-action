@@ -54,11 +54,22 @@ export async function checkAndDeleteEmptyBranch(
           );
           shouldDeleteBranch = true;
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error checking branch in Gitea:", error);
-        // If we can't check, assume the branch has commits to be safe
-        const branchUrl = `${GITHUB_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
-        branchLink = `\n[View branch](${branchUrl})`;
+
+        // Handle 404 specifically - branch doesn't exist
+        if (error.status === 404) {
+          console.log(
+            `Branch ${claudeBranch} does not exist yet - this is normal during workflow`,
+          );
+          // Don't add branch link since branch doesn't exist
+          branchLink = "";
+        } else {
+          // For other errors, assume the branch has commits to be safe
+          console.log("Assuming branch exists due to non-404 error");
+          const branchUrl = `${GITHUB_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
+          branchLink = `\n[View branch](${branchUrl})`;
+        }
       }
     } else {
       // GitHub environment - use the comparison API

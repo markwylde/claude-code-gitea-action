@@ -121,21 +121,39 @@ export async function setupBranch(
 
     console.log(`Current SHA: ${currentSHA}`);
 
-    // Check if we're in a Gitea environment
+    // Try to create branch using the appropriate method for each platform
     const isGitea =
       process.env.GITHUB_API_URL &&
       !process.env.GITHUB_API_URL.includes("api.github.com");
 
     if (isGitea) {
-      // Gitea doesn't reliably support git.createRef, skip it
+      // Gitea supports POST /repos/{owner}/{repo}/branches
       console.log(
-        `Detected Gitea environment, skipping git.createRef for branch: ${newBranch}`,
+        `Detected Gitea environment, using branches API for: ${newBranch}`,
       );
-      console.log(
-        `Branch ${newBranch} will be created when files are pushed via MCP server`,
-      );
+
+      try {
+        // Use the raw Gitea API since Octokit might not have the createBranch method
+        await octokits.rest.request("POST /repos/{owner}/{repo}/branches", {
+          owner,
+          repo,
+          new_branch_name: newBranch,
+          old_branch_name: sourceBranch,
+        });
+        console.log(
+          `Successfully created branch via Gitea branches API: ${newBranch}`,
+        );
+      } catch (createBranchError: any) {
+        console.log(
+          `Gitea branch creation failed: ${createBranchError.message}`,
+        );
+        console.log(`Error status: ${createBranchError.status}`);
+        console.log(
+          `Branch ${newBranch} will be created when files are pushed via MCP server`,
+        );
+      }
     } else {
-      // GitHub environment - try to create branch via API
+      // GitHub environment - use git.createRef
       try {
         await octokits.rest.git.createRef({
           owner,
@@ -144,12 +162,11 @@ export async function setupBranch(
           sha: currentSHA,
         });
 
-        console.log(`Successfully created branch via API: ${newBranch}`);
-      } catch (createRefError: any) {
-        // If creation fails on GitHub, log but continue
         console.log(
-          `git createRef failed on GitHub: ${createRefError.message}`,
+          `Successfully created branch via GitHub git.createRef: ${newBranch}`,
         );
+      } catch (createRefError: any) {
+        console.log(`GitHub git.createRef failed: ${createRefError.message}`);
         console.log(`Error status: ${createRefError.status}`);
         console.log(
           `Branch ${newBranch} will be created when files are pushed`,
