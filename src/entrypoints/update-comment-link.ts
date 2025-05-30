@@ -12,6 +12,7 @@ import {
 } from "../github/context";
 import { GITEA_SERVER_URL } from "../github/api/config";
 import { checkAndDeleteEmptyBranch } from "../github/operations/branch-cleanup";
+import { branchHasChanges, fetchBranch, branchExists, remoteBranchExists } from "../github/utils/local-git";
 
 async function run() {
   try {
@@ -105,32 +106,71 @@ async function run() {
       const containsPRUrl = currentBody.match(prUrlPattern);
 
       if (!containsPRUrl) {
-        // Use direct SHA comparison for all Git platforms
-        console.log("Using SHA comparison for PR link check");
+        // Check if we're using Gitea or GitHub
+        const giteaApiUrl = process.env.GITEA_API_URL?.trim();
+        const isGitea = giteaApiUrl && 
+          giteaApiUrl !== "" && 
+          !giteaApiUrl.includes("api.github.com") &&
+          !giteaApiUrl.includes("github.com");
 
-        try {
-          // Get the branch info to see if it exists and has commits
-          const branchResponse = await client.api.getBranch(
-            owner,
-            repo,
-            claudeBranch,
-          );
+        if (isGitea) {
+          // Use local git commands for Gitea
+          console.log("Using local git commands for PR link check (Gitea mode)");
 
-          // Get base branch info for comparison
-          const baseResponse = await client.api.getBranch(
-            owner,
-            repo,
-            baseBranch,
-          );
+          try {
+            // Fetch latest changes from remote
+            await fetchBranch(claudeBranch);
+            await fetchBranch(baseBranch);
 
-          const branchSha = branchResponse.data.commit.sha;
-          const baseSha = baseResponse.data.commit.sha;
+            // Check if branch exists and has changes
+            const { hasChanges, branchSha, baseSha } = await branchHasChanges(claudeBranch, baseBranch);
 
-          // If SHAs are different, assume there are changes and add PR link
-          if (branchSha !== baseSha) {
-            console.log(
-              `Branch ${claudeBranch} appears to have changes (different SHA from base)`,
-            );
+            if (branchSha && baseSha) {
+              if (hasChanges) {
+                console.log(
+                  `Branch ${claudeBranch} appears to have changes (different SHA from base)`,
+                );
+                const entityType = context.isPR ? "PR" : "Issue";
+                const prTitle = encodeURIComponent(
+                  `${entityType} #${context.entityNumber}: Changes from Claude`,
+                );
+                const prBody = encodeURIComponent(
+                  `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
+                );
+                const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
+                prLink = `\n[Create a PR](${prUrl})`;
+              } else {
+                console.log(
+                  `Branch ${claudeBranch} has same SHA as base, no PR link needed`,
+                );
+              }
+            } else {
+              // If we can't get SHAs, check if branch exists at all
+              const localExists = await branchExists(claudeBranch);
+              const remoteExists = await remoteBranchExists(claudeBranch);
+              
+              if (localExists || remoteExists) {
+                console.log(`Branch ${claudeBranch} exists but SHA comparison failed, adding PR link to be safe`);
+                const entityType = context.isPR ? "PR" : "Issue";
+                const prTitle = encodeURIComponent(
+                  `${entityType} #${context.entityNumber}: Changes from Claude`,
+                );
+                const prBody = encodeURIComponent(
+                  `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
+                );
+                const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
+                prLink = `\n[Create a PR](${prUrl})`;
+              } else {
+                console.log(
+                  `Branch ${claudeBranch} does not exist yet - no PR link needed`,
+                );
+                prLink = "";
+              }
+            }
+          } catch (error: any) {
+            console.error("Error checking branch with git commands:", error);
+            // For errors, add PR link to be safe
+            console.log("Adding PR link as fallback due to git command error");
             const entityType = context.isPR ? "PR" : "Issue";
             const prTitle = encodeURIComponent(
               `${entityType} #${context.entityNumber}: Changes from Claude`,
@@ -140,33 +180,71 @@ async function run() {
             );
             const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
             prLink = `\n[Create a PR](${prUrl})`;
-          } else {
-            console.log(
-              `Branch ${claudeBranch} has same SHA as base, no PR link needed`,
-            );
           }
-        } catch (error: any) {
-          console.error("Error checking branch:", error);
+        } else {
+          // Use API calls for GitHub
+          console.log("Using API calls for PR link check (GitHub mode)");
 
-          // Handle 404 specifically - branch doesn't exist
-          if (error.status === 404) {
-            console.log(
-              `Branch ${claudeBranch} does not exist yet - no PR link needed`,
+          try {
+            // Get the branch info to see if it exists and has commits
+            const branchResponse = await client.api.getBranch(
+              owner,
+              repo,
+              claudeBranch,
             );
-            // Don't add PR link since branch doesn't exist
-            prLink = "";
-          } else {
-            // For other errors, add PR link to be safe
-            console.log("Adding PR link as fallback due to non-404 error");
-            const entityType = context.isPR ? "PR" : "Issue";
-            const prTitle = encodeURIComponent(
-              `${entityType} #${context.entityNumber}: Changes from Claude`,
+
+            // Get base branch info for comparison
+            const baseResponse = await client.api.getBranch(
+              owner,
+              repo,
+              baseBranch,
             );
-            const prBody = encodeURIComponent(
-              `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
-            );
-            const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
-            prLink = `\n[Create a PR](${prUrl})`;
+
+            const branchSha = branchResponse.data.commit.sha;
+            const baseSha = baseResponse.data.commit.sha;
+
+            // If SHAs are different, assume there are changes and add PR link
+            if (branchSha !== baseSha) {
+              console.log(
+                `Branch ${claudeBranch} appears to have changes (different SHA from base)`,
+              );
+              const entityType = context.isPR ? "PR" : "Issue";
+              const prTitle = encodeURIComponent(
+                `${entityType} #${context.entityNumber}: Changes from Claude`,
+              );
+              const prBody = encodeURIComponent(
+                `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
+              );
+              const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
+              prLink = `\n[Create a PR](${prUrl})`;
+            } else {
+              console.log(
+                `Branch ${claudeBranch} has same SHA as base, no PR link needed`,
+              );
+            }
+          } catch (error: any) {
+            console.error("Error checking branch:", error);
+
+            // Handle 404 specifically - branch doesn't exist
+            if (error.status === 404) {
+              console.log(
+                `Branch ${claudeBranch} does not exist yet - no PR link needed`,
+              );
+              // Don't add PR link since branch doesn't exist
+              prLink = "";
+            } else {
+              // For other errors, add PR link to be safe
+              console.log("Adding PR link as fallback due to non-404 error");
+              const entityType = context.isPR ? "PR" : "Issue";
+              const prTitle = encodeURIComponent(
+                `${entityType} #${context.entityNumber}: Changes from Claude`,
+              );
+              const prBody = encodeURIComponent(
+                `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
+              );
+              const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
+              prLink = `\n[Create a PR](${prUrl})`;
+            }
           }
         }
       }
