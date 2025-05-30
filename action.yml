@@ -83,6 +83,17 @@ runs:
         cd ${{ github.action_path }}
         bun install
 
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Claude Code CLI
+      shell: bash
+      run: |
+        # Install Claude Code CLI via npm
+        npm install -g @anthropic-ai/claude-cli
+
     - name: Prepare action
       id: prepare
       shell: bash
