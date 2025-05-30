@@ -187,12 +187,12 @@ export class ClaudeExecutor {
 
     // Add allowed tools if specified
     if (tools.allowed.length > 0) {
-      args.push("--allowed-tools", tools.allowed.join(","));
+      args.push("--allowedTools", tools.allowed.join(","));
     }
 
     // Add disallowed tools if specified  
     if (tools.disallowed.length > 0) {
-      args.push("--disallowed-tools", tools.disallowed.join(","));
+      args.push("--disallowedTools", tools.disallowed.join(","));
     }
 
     console.log("[CLAUDE-EXECUTOR] Claude Code command:", "claude", args.join(" "));
