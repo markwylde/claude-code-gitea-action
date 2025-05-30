@@ -172,10 +172,18 @@ export class ClaudeExecutor {
 
     // Build Claude Code command arguments
     const args = [
-      "--file", promptFile,
-      "--mcp-config", mcpConfigFile,
-      "--model", this.config.model || "claude-3-7-sonnet-20250219"
+      "-p", `@${promptFile}`
     ];
+
+    // Add MCP config if available
+    if (mcpConfigFile) {
+      args.push("--mcp-config", mcpConfigFile);
+    }
+
+    // Add model if specified
+    if (this.config.model) {
+      args.push("--model", this.config.model);
+    }
 
     // Add allowed tools if specified
     if (tools.allowed.length > 0) {
