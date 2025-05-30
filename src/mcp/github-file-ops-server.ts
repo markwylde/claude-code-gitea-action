@@ -81,12 +81,11 @@ server.tool(
       });
 
       // 1. Get the branch reference
-      const refUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/git/refs/heads/${branch}`;
+      const refUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/refs/heads/${branch}`;
       const refResponse = await fetch(refUrl, {
         headers: {
-          Accept: "application/vnd.github+json",
-          Authorization: `Bearer ${githubToken}`,
-          "X-GitHub-Api-Version": "2022-11-28",
+          "Content-Type": "application/json",
+          Authorization: `token ${githubToken}`,
         },
       });
 
@@ -100,12 +99,11 @@ server.tool(
       const baseSha = refData.object.sha;
 
       // 2. Get the base commit
-      const commitUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/git/commits/${baseSha}`;
+      const commitUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/commits/${baseSha}`;
       const commitResponse = await fetch(commitUrl, {
         headers: {
-          Accept: "application/vnd.github+json",
-          Authorization: `Bearer ${githubToken}`,
-          "X-GitHub-Api-Version": "2022-11-28",
+          "Content-Type": "application/json",
+          Authorization: `token ${githubToken}`,
         },
       });
 
@@ -134,14 +132,12 @@ server.tool(
       );
 
       // 4. Create a new tree
-      const treeUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/git/trees`;
+      const treeUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/trees`;
       const treeResponse = await fetch(treeUrl, {
         method: "POST",
         headers: {
-          Accept: "application/vnd.github+json",
-          Authorization: `Bearer ${githubToken}`,
-          "X-GitHub-Api-Version": "2022-11-28",
           "Content-Type": "application/json",
+          Authorization: `token ${githubToken}`,
         },
         body: JSON.stringify({
           base_tree: baseTreeSha,
@@ -159,14 +155,12 @@ server.tool(
       const treeData = (await treeResponse.json()) as GitHubTree;
 
       // 5. Create a new commit
-      const newCommitUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/git/commits`;
+      const newCommitUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/commits`;
       const newCommitResponse = await fetch(newCommitUrl, {
         method: "POST",
         headers: {
-          Accept: "application/vnd.github+json",
-          Authorization: `Bearer ${githubToken}`,
-          "X-GitHub-Api-Version": "2022-11-28",
           "Content-Type": "application/json",
+          Authorization: `token ${githubToken}`,
         },
         body: JSON.stringify({
           message: message,
@@ -185,14 +179,12 @@ server.tool(
       const newCommitData = (await newCommitResponse.json()) as GitHubNewCommit;
 
       // 6. Update the reference to point to the new commit
-      const updateRefUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/git/refs/heads/${branch}`;
+      const updateRefUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/refs/heads/${branch}`;
       const updateRefResponse = await fetch(updateRefUrl, {
         method: "PATCH",
         headers: {
-          Accept: "application/vnd.github+json",
-          Authorization: `Bearer ${githubToken}`,
-          "X-GitHub-Api-Version": "2022-11-28",
           "Content-Type": "application/json",
+          Authorization: `token ${githubToken}`,
         },
         body: JSON.stringify({
           sha: newCommitData.sha,
@@ -284,12 +276,11 @@ server.tool(
       });
 
       // 1. Get the branch reference
-      const refUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/git/refs/heads/${branch}`;
+      const refUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/refs/heads/${branch}`;
       const refResponse = await fetch(refUrl, {
         headers: {
-          Accept: "application/vnd.github+json",
-          Authorization: `Bearer ${githubToken}`,
-          "X-GitHub-Api-Version": "2022-11-28",
+          "Content-Type": "application/json",
+          Authorization: `token ${githubToken}`,
         },
       });
 
@@ -303,12 +294,11 @@ server.tool(
       const baseSha = refData.object.sha;
 
       // 2. Get the base commit
-      const commitUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/git/commits/${baseSha}`;
+      const commitUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/commits/${baseSha}`;
       const commitResponse = await fetch(commitUrl, {
         headers: {
-          Accept: "application/vnd.github+json",
-          Authorization: `Bearer ${githubToken}`,
-          "X-GitHub-Api-Version": "2022-11-28",
+          "Content-Type": "application/json",
+          Authorization: `token ${githubToken}`,
         },
       });
 
@@ -328,14 +318,12 @@ server.tool(
       }));
 
       // 4. Create a new tree with deletions
-      const treeUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/git/trees`;
+      const treeUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/trees`;
       const treeResponse = await fetch(treeUrl, {
         method: "POST",
         headers: {
-          Accept: "application/vnd.github+json",
-          Authorization: `Bearer ${githubToken}`,
-          "X-GitHub-Api-Version": "2022-11-28",
           "Content-Type": "application/json",
+          Authorization: `token ${githubToken}`,
         },
         body: JSON.stringify({
           base_tree: baseTreeSha,
@@ -353,14 +341,12 @@ server.tool(
       const treeData = (await treeResponse.json()) as GitHubTree;
 
       // 5. Create a new commit
-      const newCommitUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/git/commits`;
+      const newCommitUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/commits`;
       const newCommitResponse = await fetch(newCommitUrl, {
         method: "POST",
         headers: {
-          Accept: "application/vnd.github+json",
-          Authorization: `Bearer ${githubToken}`,
-          "X-GitHub-Api-Version": "2022-11-28",
           "Content-Type": "application/json",
+          Authorization: `token ${githubToken}`,
         },
         body: JSON.stringify({
           message: message,
@@ -379,14 +365,12 @@ server.tool(
       const newCommitData = (await newCommitResponse.json()) as GitHubNewCommit;
 
       // 6. Update the reference to point to the new commit
-      const updateRefUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/git/refs/heads/${branch}`;
+      const updateRefUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/refs/heads/${branch}`;
       const updateRefResponse = await fetch(updateRefUrl, {
         method: "PATCH",
         headers: {
-          Accept: "application/vnd.github+json",
-          Authorization: `Bearer ${githubToken}`,
-          "X-GitHub-Api-Version": "2022-11-28",
           "Content-Type": "application/json",
+          Authorization: `token ${githubToken}`,
         },
         body: JSON.stringify({
           sha: newCommitData.sha,
