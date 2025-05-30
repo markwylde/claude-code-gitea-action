@@ -132,7 +132,7 @@ export async function setupBranch(
       console.log(`git createRef failed, trying branches endpoint: ${createRefError.message}`);
       
       // Use Gitea's branch creation endpoint
-      const response = await octokits.request('POST /repos/{owner}/{repo}/branches', {
+      const response = await octokits.rest.request('POST /repos/{owner}/{repo}/branches', {
         owner,
         repo,
         new_branch_name: newBranch,
