@@ -48,12 +48,28 @@ export class GiteaApiClient {
 
     try {
       const response = await fetch(url, options);
-      const responseData: any = await response.json();
+      
+      let responseData: any = null;
+      const contentType = response.headers.get("content-type");
+      
+      // Only try to parse JSON if the response has JSON content type
+      if (contentType && contentType.includes("application/json")) {
+        try {
+          responseData = await response.json();
+        } catch (parseError) {
+          console.warn(`Failed to parse JSON response: ${parseError}`);
+          responseData = await response.text();
+        }
+      } else {
+        responseData = await response.text();
+      }
 
       if (!response.ok) {
-        const error = new Error(
-          `HTTP ${response.status}: ${responseData.message || response.statusText}`
-        ) as GiteaApiError;
+        const errorMessage = typeof responseData === 'object' && responseData.message 
+          ? responseData.message 
+          : responseData || response.statusText;
+        
+        const error = new Error(`HTTP ${response.status}: ${errorMessage}`) as GiteaApiError;
         error.status = response.status;
         error.response = {
           data: responseData,

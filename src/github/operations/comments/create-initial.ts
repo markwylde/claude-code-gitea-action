@@ -25,13 +25,17 @@ export async function createInitialComment(
   try {
     let response;
 
+    console.log(`Creating comment for ${context.isPR ? 'PR' : 'issue'} #${context.entityNumber}`);
+    
     // Only use createReplyForReviewComment if it's a PR review comment AND we have a comment_id
     if (isPullRequestReviewCommentEvent(context)) {
+      console.log(`Creating PR review comment reply`);
       response = await api.customRequest("POST", `/api/v1/repos/${owner}/${repo}/pulls/${context.entityNumber}/comments/${context.payload.comment.id}/replies`, {
         body: initialBody,
       });
     } else {
       // For all other cases (issues, issue comments, or missing comment_id)
+      console.log(`Creating issue comment via API`);
       response = await api.createIssueComment(owner, repo, context.entityNumber, initialBody);
     }
 
