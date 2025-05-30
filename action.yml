@@ -83,17 +83,6 @@ runs:
         cd ${{ github.action_path }}
         bun install
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-
-    - name: Install Claude Code CLI
-      shell: bash
-      run: |
-        # Install Claude Code CLI via npm
-        npm install -g @anthropic-ai/claude-code
-
     - name: Prepare action
       id: prepare
       shell: bash
@@ -114,9 +103,17 @@ runs:
     - name: Run Claude Code
       id: claude-code
       if: steps.prepare.outputs.contains_trigger == 'true'
-      shell: bash
-      run: |
-        bun run ${{ github.action_path }}/src/entrypoints/execute-claude.ts
+      uses: anthropics/claude-code-base-action@c8e31bd52d9a149b3f8309d7978c6edaa282688d # v0.0.8
+      with:
+        prompt_file: /tmp/claude-prompts/claude-prompt.txt
+        allowed_tools: ${{ env.ALLOWED_TOOLS }}
+        disallowed_tools: ${{ env.DISALLOWED_TOOLS }}
+        timeout_minutes: ${{ inputs.timeout_minutes }}
+        model: ${{ inputs.model || inputs.anthropic_model }}
+        mcp_config: ${{ steps.prepare.outputs.mcp_config }}
+        use_bedrock: ${{ inputs.use_bedrock }}
+        use_vertex: ${{ inputs.use_vertex }}
+        anthropic_api_key: ${{ inputs.anthropic_api_key }}
       env:
         # Core configuration
         PROMPT_FILE: /tmp/claude-prompts/claude-prompt.txt
