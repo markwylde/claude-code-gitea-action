@@ -119,7 +119,7 @@ export async function setupBranch(
 
     console.log(`Current SHA: ${currentSHA}`);
 
-    // Create branch - try GitHub API first, fallback to Gitea API
+    // Create branch - try GitHub API first, fallback to Git CLI
     try {
       await octokits.rest.git.createRef({
         owner,
@@ -127,23 +127,19 @@ export async function setupBranch(
         ref: `refs/heads/${newBranch}`,
         sha: currentSHA,
       });
-    } catch (createRefError: any) {
-      // If git/refs creation fails (like in Gitea), use the branches endpoint
-      console.log(`git createRef failed, trying branches endpoint: ${createRefError.message}`);
       
-      // Use Gitea's branch creation endpoint
-      const response = await octokits.rest.request('POST /repos/{owner}/{repo}/branches', {
-        owner,
-        repo,
-        new_branch_name: newBranch,
-        old_branch_name: sourceBranch,
-      });
-      console.log(`Created branch via branches endpoint: ${response.status}`);
+      // If API creation succeeded, checkout the new branch
+      await $`git fetch origin --depth=1 ${newBranch}`;
+      await $`git checkout ${newBranch}`;
+    } catch (createRefError: any) {
+      // If git/refs creation fails (like in Gitea), fall back to Git CLI
+      console.log(`git createRef failed, using Git CLI fallback: ${createRefError.message}`);
+      
+      // Use Git CLI to create and checkout the branch locally, then push it
+      await $`git checkout -b ${newBranch}`;
+      await $`git push origin ${newBranch}`;
+      console.log(`Created branch via Git CLI: ${newBranch}`);
     }
-
-    // Checkout the new branch (shallow fetch for performance)
-    await $`git fetch origin --depth=1 ${newBranch}`;
-    await $`git checkout ${newBranch}`;
 
     console.log(
       `Successfully created and checked out new branch: ${newBranch}`,
