@@ -94,14 +94,27 @@ export async function setupBranch(
 
   try {
     // Get the SHA of the source branch
-    // For Gitea, use heads/ prefix like GitHub
-    const sourceBranchRef = await octokits.rest.git.getRef({
-      owner,
-      repo,
-      ref: `heads/${sourceBranch}`,
-    });
-
-    const currentSHA = sourceBranchRef.data.object.sha;
+    // For Gitea, try using the branches endpoint instead of git/refs
+    let currentSHA: string;
+    
+    try {
+      // First try the GitHub-compatible git.getRef approach
+      const sourceBranchRef = await octokits.rest.git.getRef({
+        owner,
+        repo,
+        ref: `heads/${sourceBranch}`,
+      });
+      currentSHA = sourceBranchRef.data.object.sha;
+    } catch (gitRefError: any) {
+      // If git/refs fails (like in Gitea), use the branches endpoint
+      console.log(`git/refs failed, trying branches endpoint: ${gitRefError.message}`);
+      const branchResponse = await octokits.rest.repos.getBranch({
+        owner,
+        repo,
+        branch: sourceBranch,
+      });
+      currentSHA = branchResponse.data.commit.sha;
+    }
 
     console.log(`Current SHA: ${currentSHA}`);
 
