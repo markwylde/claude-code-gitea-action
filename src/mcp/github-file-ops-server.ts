@@ -80,137 +80,15 @@ server.tool(
         return filePath;
       });
 
-      // 1. Get the branch reference
-      const refUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/refs/heads/${branch}`;
-      const refResponse = await fetch(refUrl, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `token ${githubToken}`,
-        },
-      });
-
-      if (!refResponse.ok) {
-        throw new Error(
-          `Failed to get branch reference: ${refResponse.status}`,
-        );
-      }
-
-      const refData = (await refResponse.json()) as GitHubRef;
-      const baseSha = refData.object.sha;
-
-      // 2. Get the base commit
-      const commitUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/commits/${baseSha}`;
-      const commitResponse = await fetch(commitUrl, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `token ${githubToken}`,
-        },
-      });
-
-      if (!commitResponse.ok) {
-        throw new Error(`Failed to get base commit: ${commitResponse.status}`);
-      }
-
-      const commitData = (await commitResponse.json()) as GitHubCommit;
-      const baseTreeSha = commitData.tree.sha;
-
-      // 3. Create tree entries for all files
-      const treeEntries = await Promise.all(
-        processedFiles.map(async (filePath) => {
-          const fullPath = filePath.startsWith("/")
-            ? filePath
-            : join(REPO_DIR, filePath);
-
-          const content = await readFile(fullPath, "utf-8");
-          return {
-            path: filePath,
-            mode: "100644",
-            type: "blob",
-            content: content,
-          };
-        }),
+      // NOTE: Gitea does not support GitHub's low-level git API operations
+      // (creating trees, commits, etc.). We need to use the contents API instead.
+      // For now, throw an error indicating this functionality is not available.
+      throw new Error(
+        "Multi-file commits are not supported with Gitea. " +
+        "Gitea does not provide the low-level git API operations (trees, commits) " +
+        "that are required for atomic multi-file commits. " +
+        "Please commit files individually using the contents API."
       );
-
-      // 4. Create a new tree
-      const treeUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/trees`;
-      const treeResponse = await fetch(treeUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `token ${githubToken}`,
-        },
-        body: JSON.stringify({
-          base_tree: baseTreeSha,
-          tree: treeEntries,
-        }),
-      });
-
-      if (!treeResponse.ok) {
-        const errorText = await treeResponse.text();
-        throw new Error(
-          `Failed to create tree: ${treeResponse.status} - ${errorText}`,
-        );
-      }
-
-      const treeData = (await treeResponse.json()) as GitHubTree;
-
-      // 5. Create a new commit
-      const newCommitUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/commits`;
-      const newCommitResponse = await fetch(newCommitUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `token ${githubToken}`,
-        },
-        body: JSON.stringify({
-          message: message,
-          tree: treeData.sha,
-          parents: [baseSha],
-        }),
-      });
-
-      if (!newCommitResponse.ok) {
-        const errorText = await newCommitResponse.text();
-        throw new Error(
-          `Failed to create commit: ${newCommitResponse.status} - ${errorText}`,
-        );
-      }
-
-      const newCommitData = (await newCommitResponse.json()) as GitHubNewCommit;
-
-      // 6. Update the reference to point to the new commit
-      const updateRefUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/refs/heads/${branch}`;
-      const updateRefResponse = await fetch(updateRefUrl, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `token ${githubToken}`,
-        },
-        body: JSON.stringify({
-          sha: newCommitData.sha,
-          force: false,
-        }),
-      });
-
-      if (!updateRefResponse.ok) {
-        const errorText = await updateRefResponse.text();
-        throw new Error(
-          `Failed to update reference: ${updateRefResponse.status} - ${errorText}`,
-        );
-      }
-
-      const simplifiedResult = {
-        commit: {
-          sha: newCommitData.sha,
-          message: newCommitData.message,
-          author: newCommitData.author.name,
-          date: newCommitData.author.date,
-        },
-        files: processedFiles.map((path) => ({ path })),
-        tree: {
-          sha: treeData.sha,
-        },
-      };
 
       return {
         content: [
@@ -275,128 +153,15 @@ server.tool(
         return filePath;
       });
 
-      // 1. Get the branch reference
-      const refUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/refs/heads/${branch}`;
-      const refResponse = await fetch(refUrl, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `token ${githubToken}`,
-        },
-      });
-
-      if (!refResponse.ok) {
-        throw new Error(
-          `Failed to get branch reference: ${refResponse.status}`,
-        );
-      }
-
-      const refData = (await refResponse.json()) as GitHubRef;
-      const baseSha = refData.object.sha;
-
-      // 2. Get the base commit
-      const commitUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/commits/${baseSha}`;
-      const commitResponse = await fetch(commitUrl, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `token ${githubToken}`,
-        },
-      });
-
-      if (!commitResponse.ok) {
-        throw new Error(`Failed to get base commit: ${commitResponse.status}`);
-      }
-
-      const commitData = (await commitResponse.json()) as GitHubCommit;
-      const baseTreeSha = commitData.tree.sha;
-
-      // 3. Create tree entries for file deletions (setting SHA to null)
-      const treeEntries = processedPaths.map((path) => ({
-        path: path,
-        mode: "100644",
-        type: "blob" as const,
-        sha: null,
-      }));
-
-      // 4. Create a new tree with deletions
-      const treeUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/trees`;
-      const treeResponse = await fetch(treeUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `token ${githubToken}`,
-        },
-        body: JSON.stringify({
-          base_tree: baseTreeSha,
-          tree: treeEntries,
-        }),
-      });
-
-      if (!treeResponse.ok) {
-        const errorText = await treeResponse.text();
-        throw new Error(
-          `Failed to create tree: ${treeResponse.status} - ${errorText}`,
-        );
-      }
-
-      const treeData = (await treeResponse.json()) as GitHubTree;
-
-      // 5. Create a new commit
-      const newCommitUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/commits`;
-      const newCommitResponse = await fetch(newCommitUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `token ${githubToken}`,
-        },
-        body: JSON.stringify({
-          message: message,
-          tree: treeData.sha,
-          parents: [baseSha],
-        }),
-      });
-
-      if (!newCommitResponse.ok) {
-        const errorText = await newCommitResponse.text();
-        throw new Error(
-          `Failed to create commit: ${newCommitResponse.status} - ${errorText}`,
-        );
-      }
-
-      const newCommitData = (await newCommitResponse.json()) as GitHubNewCommit;
-
-      // 6. Update the reference to point to the new commit
-      const updateRefUrl = `${GITHUB_API_URL}/api/v1/repos/${owner}/${repo}/git/refs/heads/${branch}`;
-      const updateRefResponse = await fetch(updateRefUrl, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `token ${githubToken}`,
-        },
-        body: JSON.stringify({
-          sha: newCommitData.sha,
-          force: false,
-        }),
-      });
-
-      if (!updateRefResponse.ok) {
-        const errorText = await updateRefResponse.text();
-        throw new Error(
-          `Failed to update reference: ${updateRefResponse.status} - ${errorText}`,
-        );
-      }
-
-      const simplifiedResult = {
-        commit: {
-          sha: newCommitData.sha,
-          message: newCommitData.message,
-          author: newCommitData.author.name,
-          date: newCommitData.author.date,
-        },
-        deletedFiles: processedPaths.map((path) => ({ path })),
-        tree: {
-          sha: treeData.sha,
-        },
-      };
+      // NOTE: Gitea does not support GitHub's low-level git API operations
+      // (creating trees, commits, etc.). We need to use the contents API instead.
+      // For now, throw an error indicating this functionality is not available.
+      throw new Error(
+        "Multi-file deletions are not supported with Gitea. " +
+        "Gitea does not provide the low-level git API operations (trees, commits) " +
+        "that are required for atomic multi-file operations. " +
+        "Please delete files individually using the contents API."
+      );
 
       return {
         content: [
