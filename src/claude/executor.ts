@@ -132,51 +132,16 @@ export class ClaudeExecutor {
       console.log(`[CLAUDE-EXECUTOR] Allowed tools: ${tools.allowed.join(", ") || "none"}`);
       console.log(`[CLAUDE-EXECUTOR] Disallowed tools: ${tools.disallowed.join(", ") || "none"}`);
 
-      // For now, just log that we're using the simple API approach
-      console.log("[CLAUDE-EXECUTOR] WARNING: Using simple Anthropic API - MCP tools not supported in this implementation");
-      console.log("[CLAUDE-EXECUTOR] This explains why Claude cannot use mcp__local_git_ops tools");
+      // Setup MCP configuration if provided
+      const mcpConfigFile = await this.setupMCPConfig();
       
-      if (this.config.mcpConfig) {
-        console.log("[CLAUDE-EXECUTOR] MCP config provided but not used:");
-        console.log(this.config.mcpConfig.substring(0, 200) + "...");
+      if (mcpConfigFile) {
+        console.log("[CLAUDE-EXECUTOR] Using Claude Code with MCP configuration");
+        return await this.executeWithMCP(prompt, mcpConfigFile, tools);
+      } else {
+        console.log("[CLAUDE-EXECUTOR] No MCP config provided, falling back to basic API");
+        return await this.executeBasicAPI(prompt);
       }
-
-      if (!this.config.apiKey) {
-        throw new Error("Anthropic API key is required");
-      }
-
-      const anthropic = new Anthropic({
-        apiKey: this.config.apiKey,
-      });
-
-      console.log("[CLAUDE-EXECUTOR] Starting simple Anthropic API call...");
-      console.log("[CLAUDE-EXECUTOR] Prompt preview:", prompt.substring(0, 500) + "...");
-
-      // Create a simple message request  
-      const response = await anthropic.messages.create({
-        model: this.config.model || "claude-3-7-sonnet-20250219",
-        max_tokens: 8192,
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-      });
-
-      console.log("[CLAUDE-EXECUTOR] Claude response received successfully");
-      console.log("[CLAUDE-EXECUTOR] Response type:", response.content[0]?.type);
-      
-      if (response.content[0]?.type === "text") {
-        console.log("[CLAUDE-EXECUTOR] Response preview:", response.content[0].text.substring(0, 500) + "...");
-      }
-
-      const executionFile = this.createExecutionLog(response);
-
-      return {
-        conclusion: "success",
-        executionFile,
-      };
     } catch (error) {
       console.error("[CLAUDE-EXECUTOR] Claude execution failed:", error);
 
@@ -188,6 +153,136 @@ export class ClaudeExecutor {
         error: String(error),
       };
     }
+  }
+
+  private async executeWithMCP(
+    prompt: string,
+    mcpConfigFile: string,
+    tools: { allowed: string[]; disallowed: string[] }
+  ): Promise<ClaudeExecutorResult> {
+    console.log("[CLAUDE-EXECUTOR] Starting Claude Code with MCP support...");
+    
+    if (!this.config.apiKey) {
+      throw new Error("Anthropic API key is required");
+    }
+
+    // Write prompt to a temporary file
+    const promptFile = "/tmp/claude-prompt.txt";
+    fs.writeFileSync(promptFile, prompt);
+
+    // Build Claude Code command arguments
+    const args = [
+      "--file", promptFile,
+      "--mcp-config", mcpConfigFile,
+      "--model", this.config.model || "claude-3-7-sonnet-20250219"
+    ];
+
+    // Add allowed tools if specified
+    if (tools.allowed.length > 0) {
+      args.push("--allowed-tools", tools.allowed.join(","));
+    }
+
+    // Add disallowed tools if specified  
+    if (tools.disallowed.length > 0) {
+      args.push("--disallowed-tools", tools.disallowed.join(","));
+    }
+
+    console.log("[CLAUDE-EXECUTOR] Claude Code command:", "claude", args.join(" "));
+
+    return new Promise((resolve) => {
+      const claude = spawn("claude", args, {
+        env: {
+          ...process.env,
+          ANTHROPIC_API_KEY: this.config.apiKey,
+        },
+      });
+
+      let stdout = "";
+      let stderr = "";
+
+      claude.stdout?.on("data", (data) => {
+        const chunk = data.toString();
+        stdout += chunk;
+        console.log("[CLAUDE-STDOUT]", chunk.trim());
+      });
+
+      claude.stderr?.on("data", (data) => {
+        const chunk = data.toString();
+        stderr += chunk;
+        console.log("[CLAUDE-STDERR]", chunk.trim());
+      });
+
+      claude.on("close", (code) => {
+        console.log(`[CLAUDE-EXECUTOR] Claude Code process exited with code ${code}`);
+        
+        const result = {
+          stdout,
+          stderr,
+          exitCode: code,
+          success: code === 0,
+        };
+
+        const executionFile = this.createExecutionLog(result, code !== 0 ? `Process exited with code ${code}` : undefined);
+
+        resolve({
+          conclusion: code === 0 ? "success" : "failure",
+          executionFile,
+          error: code !== 0 ? `Claude Code exited with code ${code}: ${stderr}` : undefined,
+        });
+      });
+
+      claude.on("error", (error) => {
+        console.error("[CLAUDE-EXECUTOR] Failed to spawn Claude Code process:", error);
+        const executionFile = this.createExecutionLog(null, String(error));
+        resolve({
+          conclusion: "failure",
+          executionFile,
+          error: String(error),
+        });
+      });
+    });
+  }
+
+  private async executeBasicAPI(prompt: string): Promise<ClaudeExecutorResult> {
+    console.log("[CLAUDE-EXECUTOR] WARNING: Using simple Anthropic API - MCP tools not supported in this implementation");
+    console.log("[CLAUDE-EXECUTOR] This explains why Claude cannot use mcp__local_git_ops tools");
+
+    if (!this.config.apiKey) {
+      throw new Error("Anthropic API key is required");
+    }
+
+    const anthropic = new Anthropic({
+      apiKey: this.config.apiKey,
+    });
+
+    console.log("[CLAUDE-EXECUTOR] Starting simple Anthropic API call...");
+    console.log("[CLAUDE-EXECUTOR] Prompt preview:", prompt.substring(0, 500) + "...");
+
+    // Create a simple message request  
+    const response = await anthropic.messages.create({
+      model: this.config.model || "claude-3-7-sonnet-20250219",
+      max_tokens: 8192,
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    });
+
+    console.log("[CLAUDE-EXECUTOR] Claude response received successfully");
+    console.log("[CLAUDE-EXECUTOR] Response type:", response.content[0]?.type);
+    
+    if (response.content[0]?.type === "text") {
+      console.log("[CLAUDE-EXECUTOR] Response preview:", response.content[0].text.substring(0, 500) + "...");
+    }
+
+    const executionFile = this.createExecutionLog(response);
+
+    return {
+      conclusion: "success",
+      executionFile,
+    };
   }
 }
 
