@@ -75,7 +75,7 @@ server.tool(
   },
   async ({ issue_number }) => {
     try {
-      const issue = await giteaRequest(`/repos/${REPO_OWNER}/${REPO_NAME}/issues/${issue_number}`);
+      const issue = await giteaRequest(`/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues/${issue_number}`);
       
       return {
         content: [
@@ -113,7 +113,7 @@ server.tool(
   },
   async ({ issue_number, since, before }) => {
     try {
-      let endpoint = `/repos/${REPO_OWNER}/${REPO_NAME}/issues/${issue_number}/comments`;
+      let endpoint = `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues/${issue_number}/comments`;
       const params = new URLSearchParams();
       
       if (since) params.append("since", since);
@@ -161,7 +161,7 @@ server.tool(
   async ({ issue_number, body }) => {
     try {
       const comment = await giteaRequest(
-        `/repos/${REPO_OWNER}/${REPO_NAME}/issues/${issue_number}/comments`,
+        `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues/${issue_number}/comments`,
         "POST",
         { body },
       );
@@ -202,7 +202,7 @@ server.tool(
   async ({ comment_id, body }) => {
     try {
       const comment = await giteaRequest(
-        `/repos/${REPO_OWNER}/${REPO_NAME}/issues/comments/${comment_id}`,
+        `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues/comments/${comment_id}`,
         "PATCH",
         { body },
       );
@@ -242,7 +242,7 @@ server.tool(
   async ({ comment_id }) => {
     try {
       await giteaRequest(
-        `/repos/${REPO_OWNER}/${REPO_NAME}/issues/comments/${comment_id}`,
+        `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues/comments/${comment_id}`,
         "DELETE",
       );
       
@@ -280,7 +280,7 @@ server.tool(
   },
   async ({ comment_id }) => {
     try {
-      const comment = await giteaRequest(`/repos/${REPO_OWNER}/${REPO_NAME}/issues/comments/${comment_id}`);
+      const comment = await giteaRequest(`/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues/comments/${comment_id}`);
       
       return {
         content: [
@@ -323,7 +323,7 @@ server.tool(
   },
   async ({ state, labels, milestone, assignee, creator, mentioned, page, limit }) => {
     try {
-      let endpoint = `/repos/${REPO_OWNER}/${REPO_NAME}/issues`;
+      let endpoint = `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues`;
       const params = new URLSearchParams();
       
       if (state) params.append("state", state);
@@ -389,7 +389,7 @@ server.tool(
       if (labels) issueData.labels = labels;
 
       const issue = await giteaRequest(
-        `/repos/${REPO_OWNER}/${REPO_NAME}/issues`,
+        `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues`,
         "POST",
         issueData,
       );
@@ -446,7 +446,7 @@ server.tool(
       if (state) updateData.state = state;
 
       const issue = await giteaRequest(
-        `/repos/${REPO_OWNER}/${REPO_NAME}/issues/${issue_number}`,
+        `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues/${issue_number}`,
         "PATCH",
         updateData,
       );
@@ -483,7 +483,7 @@ server.tool(
   {},
   async () => {
     try {
-      const repo = await giteaRequest(`/repos/${REPO_OWNER}/${REPO_NAME}`);
+      const repo = await giteaRequest(`/api/v1/repos/${REPO_OWNER}/${REPO_NAME}`);
       
       return {
         content: [
@@ -523,7 +523,7 @@ server.tool(
   },
   async ({ state, head, base, page, limit }) => {
     try {
-      let endpoint = `/repos/${REPO_OWNER}/${REPO_NAME}/pulls`;
+      let endpoint = `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/pulls`;
       const params = new URLSearchParams();
       
       if (state) params.append("state", state);
@@ -572,7 +572,7 @@ server.tool(
   },
   async ({ pull_number }) => {
     try {
-      const pull = await giteaRequest(`/repos/${REPO_OWNER}/${REPO_NAME}/pulls/${pull_number}`);
+      const pull = await giteaRequest(`/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/pulls/${pull_number}`);
       
       return {
         content: [
@@ -624,7 +624,7 @@ server.tool(
       if (labels) pullData.labels = labels;
 
       const pull = await giteaRequest(
-        `/repos/${REPO_OWNER}/${REPO_NAME}/pulls`,
+        `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/pulls`,
         "POST",
         pullData,
       );
