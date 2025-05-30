@@ -10,7 +10,7 @@ import {
   parseGitHubContext,
   isPullRequestReviewCommentEvent,
 } from "../github/context";
-import { GITHUB_SERVER_URL } from "../github/api/config";
+import { GITEA_SERVER_URL } from "../github/api/config";
 import { checkAndDeleteEmptyBranch } from "../github/operations/branch-cleanup";
 
 async function run() {
@@ -25,7 +25,7 @@ async function run() {
     const { owner, repo } = context.repository;
     const client = createClient(githubToken);
 
-    const serverUrl = GITHUB_SERVER_URL;
+    const serverUrl = GITEA_SERVER_URL;
     const jobUrl = `${serverUrl}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`;
 
     let comment;

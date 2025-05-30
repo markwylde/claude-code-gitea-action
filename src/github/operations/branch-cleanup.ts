@@ -1,5 +1,5 @@
 import type { GitHubClient } from "../api/client";
-import { GITHUB_SERVER_URL } from "../api/config";
+import { GITEA_SERVER_URL } from "../api/config";
 
 export async function checkAndDeleteEmptyBranch(
   client: GitHubClient,
@@ -30,7 +30,7 @@ export async function checkAndDeleteEmptyBranch(
         console.log(
           `Branch ${claudeBranch} appears to have commits (different SHA from base)`,
         );
-        const branchUrl = `${GITHUB_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
+        const branchUrl = `${GITEA_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
         branchLink = `\n[View branch](${branchUrl})`;
       } else {
         console.log(
@@ -51,7 +51,7 @@ export async function checkAndDeleteEmptyBranch(
       } else {
         // For other errors, assume the branch has commits to be safe
         console.log("Assuming branch exists due to non-404 error");
-        const branchUrl = `${GITHUB_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
+        const branchUrl = `${GITEA_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
         branchLink = `\n[View branch](${branchUrl})`;
       }
     }

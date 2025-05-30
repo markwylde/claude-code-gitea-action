@@ -1,5 +1,5 @@
 import fetch from "node-fetch";
-import { GITHUB_API_URL } from "./config";
+import { GITEA_API_URL } from "./config";
 
 export interface GiteaApiResponse<T = any> {
   status: number;
@@ -20,7 +20,7 @@ export class GiteaApiClient {
   private baseUrl: string;
   private token: string;
 
-  constructor(token: string, baseUrl: string = GITHUB_API_URL) {
+  constructor(token: string, baseUrl: string = GITEA_API_URL) {
     this.token = token;
     this.baseUrl = baseUrl.replace(/\/+$/, ""); // Remove trailing slashes
   }
@@ -95,6 +95,11 @@ export class GiteaApiClient {
   // Repository operations
   async getRepo(owner: string, repo: string) {
     return this.request("GET", `/api/v1/repos/${owner}/${repo}`);
+  }
+
+  // Simple test endpoint to verify API connectivity
+  async testConnection() {
+    return this.request("GET", "/api/v1/version");
   }
 
   async getBranch(owner: string, repo: string, branch: string) {

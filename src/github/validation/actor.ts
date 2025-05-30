@@ -14,8 +14,8 @@ export async function checkHumanActor(
 ) {
   // Check if we're in a Gitea environment
   const isGitea =
-    process.env.GITHUB_API_URL &&
-    !process.env.GITHUB_API_URL.includes("api.github.com");
+    process.env.GITEA_API_URL &&
+    !process.env.GITEA_API_URL.includes("api.github.com");
 
   if (isGitea) {
     console.log(

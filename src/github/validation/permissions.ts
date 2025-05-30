@@ -16,8 +16,8 @@ export async function checkWritePermissions(
 
   // For Gitea compatibility, check if we're in a non-GitHub environment
   const isGitea =
-    process.env.GITHUB_API_URL &&
-    !process.env.GITHUB_API_URL.includes("api.github.com");
+    process.env.GITEA_API_URL &&
+    !process.env.GITEA_API_URL.includes("api.github.com");
 
   if (isGitea) {
     core.info(`Detected Gitea environment, assuming actor has permissions`);

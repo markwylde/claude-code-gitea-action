@@ -26,6 +26,7 @@ export async function createInitialComment(
     let response;
 
     console.log(`Creating comment for ${context.isPR ? 'PR' : 'issue'} #${context.entityNumber}`);
+    console.log(`Repository: ${owner}/${repo}`);
     
     // Only use createReplyForReviewComment if it's a PR review comment AND we have a comment_id
     if (isPullRequestReviewCommentEvent(context)) {

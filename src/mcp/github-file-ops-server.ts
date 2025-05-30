@@ -6,7 +6,7 @@ import { z } from "zod";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import fetch from "node-fetch";
-import { GITHUB_API_URL } from "../github/api/config";
+import { GITEA_API_URL } from "../github/api/config";
 
 type GitHubRef = {
   object: {

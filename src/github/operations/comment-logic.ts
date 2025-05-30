@@ -1,4 +1,4 @@
-import { GITHUB_SERVER_URL } from "../api/config";
+import { GITEA_SERVER_URL } from "../api/config";
 
 export type ExecutionDetails = {
   cost_usd?: number;
@@ -160,7 +160,7 @@ export function updateCommentBody(input: CommentUpdateInput): string {
       // Extract owner/repo from jobUrl
       const repoMatch = jobUrl.match(/github\.com\/([^\/]+)\/([^\/]+)\//);
       if (repoMatch) {
-        branchUrl = `${GITHUB_SERVER_URL}/${repoMatch[1]}/${repoMatch[2]}/tree/${finalBranchName}`;
+        branchUrl = `${GITEA_SERVER_URL}/${repoMatch[1]}/${repoMatch[2]}/tree/${finalBranchName}`;
       }
     }
 
