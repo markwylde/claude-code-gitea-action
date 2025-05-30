@@ -13,10 +13,14 @@ export async function checkHumanActor(
   githubContext: ParsedGitHubContext,
 ) {
   // Check if we're in a Gitea environment
-  const isGitea = process.env.GITHUB_API_URL && !process.env.GITHUB_API_URL.includes('api.github.com');
-  
+  const isGitea =
+    process.env.GITHUB_API_URL &&
+    !process.env.GITHUB_API_URL.includes("api.github.com");
+
   if (isGitea) {
-    console.log(`Detected Gitea environment, skipping actor type validation for: ${githubContext.actor}`);
+    console.log(
+      `Detected Gitea environment, skipping actor type validation for: ${githubContext.actor}`,
+    );
     return;
   }
 
@@ -38,9 +42,14 @@ export async function checkHumanActor(
 
     console.log(`Verified human actor: ${githubContext.actor}`);
   } catch (error) {
-    console.warn(`Failed to check actor type for ${githubContext.actor}:`, error);
-    
+    console.warn(
+      `Failed to check actor type for ${githubContext.actor}:`,
+      error,
+    );
+
     // For compatibility, assume human actor if API call fails
-    console.log(`Assuming human actor due to API failure: ${githubContext.actor}`);
+    console.log(
+      `Assuming human actor due to API failure: ${githubContext.actor}`,
+    );
   }
 }

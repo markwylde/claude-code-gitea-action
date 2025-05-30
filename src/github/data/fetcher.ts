@@ -45,7 +45,9 @@ export async function fetchGitHubData({
   }
 
   // Check if we're in a Gitea environment (no GraphQL support)
-  const isGitea = process.env.GITHUB_API_URL && !process.env.GITHUB_API_URL.includes('api.github.com');
+  const isGitea =
+    process.env.GITHUB_API_URL &&
+    !process.env.GITHUB_API_URL.includes("api.github.com");
 
   let contextData: GitHubPullRequest | GitHubIssue | null = null;
   let comments: GitHubComment[] = [];
@@ -56,7 +58,9 @@ export async function fetchGitHubData({
     if (isGitea) {
       // Use REST API for Gitea compatibility
       if (isPR) {
-        console.log(`Fetching PR #${prNumber} data using REST API (Gitea mode)`);
+        console.log(
+          `Fetching PR #${prNumber} data using REST API (Gitea mode)`,
+        );
         const prResponse = await octokits.rest.pulls.get({
           owner,
           repo,
@@ -87,7 +91,7 @@ export async function fetchGitHubData({
             repo,
             issue_number: parseInt(prNumber),
           });
-          comments = commentsResponse.data.map(comment => ({
+          comments = commentsResponse.data.map((comment) => ({
             id: comment.id.toString(),
             databaseId: comment.id.toString(),
             body: comment.body || "",
@@ -106,7 +110,7 @@ export async function fetchGitHubData({
             repo,
             pull_number: parseInt(prNumber),
           });
-          changedFiles = filesResponse.data.map(file => ({
+          changedFiles = filesResponse.data.map((file) => ({
             path: file.filename,
             additions: file.additions || 0,
             deletions: file.deletions || 0,
@@ -119,7 +123,9 @@ export async function fetchGitHubData({
 
         reviewData = { nodes: [] }; // Simplified for Gitea
       } else {
-        console.log(`Fetching issue #${prNumber} data using REST API (Gitea mode)`);
+        console.log(
+          `Fetching issue #${prNumber} data using REST API (Gitea mode)`,
+        );
         const issueResponse = await octokits.rest.issues.get({
           owner,
           repo,
@@ -142,7 +148,7 @@ export async function fetchGitHubData({
             repo,
             issue_number: parseInt(prNumber),
           });
-          comments = commentsResponse.data.map(comment => ({
+          comments = commentsResponse.data.map((comment) => ({
             id: comment.id.toString(),
             databaseId: comment.id.toString(),
             body: comment.body || "",

@@ -34,7 +34,9 @@ export class ClaudeExecutor {
 
   private initializeClient() {
     if (this.config.useBedrock || this.config.useVertex) {
-      throw new Error("Bedrock and Vertex AI not supported in simplified implementation");
+      throw new Error(
+        "Bedrock and Vertex AI not supported in simplified implementation",
+      );
     }
 
     if (!this.config.apiKey) {
@@ -63,11 +65,17 @@ export class ClaudeExecutor {
 
   private parseTools(): { allowed: string[]; disallowed: string[] } {
     const allowed = this.config.allowedTools
-      ? this.config.allowedTools.split(",").map(t => t.trim()).filter(Boolean)
+      ? this.config.allowedTools
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
       : [];
-    
+
     const disallowed = this.config.disallowedTools
-      ? this.config.disallowedTools.split(",").map(t => t.trim()).filter(Boolean)
+      ? this.config.disallowedTools
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
       : [];
 
     return { allowed, disallowed };
@@ -92,7 +100,9 @@ export class ClaudeExecutor {
       const prompt = await this.readPrompt();
       const tools = this.parseTools();
 
-      console.log(`Executing Claude with model: ${this.config.model || "claude-3-7-sonnet-20250219"}`);
+      console.log(
+        `Executing Claude with model: ${this.config.model || "claude-3-7-sonnet-20250219"}`,
+      );
       console.log(`Allowed tools: ${tools.allowed.join(", ") || "none"}`);
       console.log(`Disallowed tools: ${tools.disallowed.join(", ") || "none"}`);
 
@@ -122,7 +132,7 @@ export class ClaudeExecutor {
       };
     } catch (error) {
       console.error("Claude execution failed:", error);
-      
+
       const executionFile = this.createExecutionLog(null, String(error));
 
       return {
@@ -134,7 +144,9 @@ export class ClaudeExecutor {
   }
 }
 
-export async function runClaude(config: ClaudeExecutorConfig): Promise<ClaudeExecutorResult> {
+export async function runClaude(
+  config: ClaudeExecutorConfig,
+): Promise<ClaudeExecutorResult> {
   const executor = new ClaudeExecutor(config);
   return await executor.execute();
 }

@@ -29,9 +29,9 @@ jobs:
           fetch-depth: 0
 
       - name: Run Claude Assistant
-        uses: ./  # Use local action (adjust path as needed)
+        uses: ./ # Use local action (adjust path as needed)
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}  # Use standard workflow token
+          github_token: ${{ secrets.GITHUB_TOKEN }} # Use standard workflow token
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           timeout_minutes: "60"
           trigger_phrase: "@claude"

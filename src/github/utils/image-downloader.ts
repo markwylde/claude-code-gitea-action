@@ -84,67 +84,135 @@ export async function downloadCommentImages(
       let bodyHtml: string | undefined;
 
       // Get the HTML version based on comment type
+      // Try with full+json mediaType first (GitHub), fallback to regular API (Gitea)
       switch (comment.type) {
         case "issue_comment": {
-          const response = await octokits.rest.issues.getComment({
-            owner,
-            repo,
-            comment_id: parseInt(comment.id),
-            mediaType: {
-              format: "full+json",
-            },
-          });
-          bodyHtml = response.data.body_html;
+          try {
+            const response = await octokits.rest.issues.getComment({
+              owner,
+              repo,
+              comment_id: parseInt(comment.id),
+              mediaType: {
+                format: "full+json",
+              },
+            });
+            bodyHtml = response.data.body_html;
+          } catch (error: any) {
+            console.log(
+              "Full+json format not supported, trying regular API for issue comment",
+            );
+            // Fallback for Gitea - use regular API without mediaType
+            const response = await octokits.rest.issues.getComment({
+              owner,
+              repo,
+              comment_id: parseInt(comment.id),
+            });
+            // Gitea might not have body_html, use body instead
+            bodyHtml = (response.data as any).body_html || response.data.body;
+          }
           break;
         }
         case "review_comment": {
-          const response = await octokits.rest.pulls.getReviewComment({
-            owner,
-            repo,
-            comment_id: parseInt(comment.id),
-            mediaType: {
-              format: "full+json",
-            },
-          });
-          bodyHtml = response.data.body_html;
+          try {
+            const response = await octokits.rest.pulls.getReviewComment({
+              owner,
+              repo,
+              comment_id: parseInt(comment.id),
+              mediaType: {
+                format: "full+json",
+              },
+            });
+            bodyHtml = response.data.body_html;
+          } catch (error: any) {
+            console.log(
+              "Full+json format not supported, trying regular API for review comment",
+            );
+            // Fallback for Gitea
+            const response = await octokits.rest.pulls.getReviewComment({
+              owner,
+              repo,
+              comment_id: parseInt(comment.id),
+            });
+            bodyHtml = (response.data as any).body_html || response.data.body;
+          }
           break;
         }
         case "review_body": {
-          const response = await octokits.rest.pulls.getReview({
-            owner,
-            repo,
-            pull_number: parseInt(comment.pullNumber),
-            review_id: parseInt(comment.id),
-            mediaType: {
-              format: "full+json",
-            },
-          });
-          bodyHtml = response.data.body_html;
+          try {
+            const response = await octokits.rest.pulls.getReview({
+              owner,
+              repo,
+              pull_number: parseInt(comment.pullNumber),
+              review_id: parseInt(comment.id),
+              mediaType: {
+                format: "full+json",
+              },
+            });
+            bodyHtml = response.data.body_html;
+          } catch (error: any) {
+            console.log(
+              "Full+json format not supported, trying regular API for review",
+            );
+            // Fallback for Gitea
+            const response = await octokits.rest.pulls.getReview({
+              owner,
+              repo,
+              pull_number: parseInt(comment.pullNumber),
+              review_id: parseInt(comment.id),
+            });
+            bodyHtml = (response.data as any).body_html || response.data.body;
+          }
           break;
         }
         case "issue_body": {
-          const response = await octokits.rest.issues.get({
-            owner,
-            repo,
-            issue_number: parseInt(comment.issueNumber),
-            mediaType: {
-              format: "full+json",
-            },
-          });
-          bodyHtml = response.data.body_html;
+          try {
+            const response = await octokits.rest.issues.get({
+              owner,
+              repo,
+              issue_number: parseInt(comment.issueNumber),
+              mediaType: {
+                format: "full+json",
+              },
+            });
+            bodyHtml = response.data.body_html;
+          } catch (error: any) {
+            console.log(
+              "Full+json format not supported, trying regular API for issue",
+            );
+            // Fallback for Gitea
+            const response = await octokits.rest.issues.get({
+              owner,
+              repo,
+              issue_number: parseInt(comment.issueNumber),
+            });
+            bodyHtml = (response.data as any).body_html || response.data.body;
+          }
           break;
         }
         case "pr_body": {
-          const response = await octokits.rest.pulls.get({
-            owner,
-            repo,
-            pull_number: parseInt(comment.pullNumber),
-            mediaType: {
-              format: "full+json",
-            },
-          });
-          // Type here seems to be wrong
-          bodyHtml = (response.data as any).body_html;
+          try {
+            const response = await octokits.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: parseInt(comment.pullNumber),
+              mediaType: {
+                format: "full+json",
+              },
+            });
+            // Type here seems to be wrong
+            bodyHtml = (response.data as any).body_html;
+          } catch (error: any) {
+            console.log(
+              "Full+json format not supported, trying regular API for PR",
+            );
+            // Fallback for Gitea
+            const response = await octokits.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: parseInt(comment.pullNumber),
+            });
+            bodyHtml = (response.data as any).body_html || response.data.body;
+          }
           break;
         }
       }

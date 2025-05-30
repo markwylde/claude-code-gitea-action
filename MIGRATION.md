@@ -5,16 +5,19 @@ This document outlines the changes made to migrate from GitHub App authenticatio
 ## What Changed
 
 ### 1. Removed GitHub App Dependencies
+
 - **Before**: Used OIDC token exchange with Anthropic's GitHub App service
 - **After**: Uses standard `GITHUB_TOKEN` from workflow environment
 - **Benefit**: No external dependencies, works with any Git provider
 
 ### 2. Self-Contained Implementation
+
 - **Before**: Depended on external `anthropics/claude-code-base-action`
 - **After**: Includes built-in Claude execution engine
 - **Benefit**: Complete control over functionality, no external action dependencies
 
 ### 3. Gitea Compatibility
+
 - **Before**: GitHub-specific triggers and authentication
 - **After**: Compatible with Gitea Actions (with some limitations)
 - **Benefit**: Works with self-hosted Gitea instances
@@ -22,6 +25,7 @@ This document outlines the changes made to migrate from GitHub App authenticatio
 ## Required Changes for Existing Users
 
 ### Workflow Permissions
+
 Update your workflow permissions:
 
 ```yaml
@@ -40,6 +44,7 @@ permissions:
 ```
 
 ### Required Token Input
+
 Now required to explicitly provide a GitHub token:
 
 ```yaml
@@ -58,6 +63,7 @@ Now required to explicitly provide a GitHub token:
 ## Gitea Setup
 
 ### 1. Basic Gitea Workflow
+
 Use the example in `examples/gitea-claude.yml`:
 
 ```yaml
@@ -86,13 +92,14 @@ jobs:
           fetch-depth: 0
 
       - name: Run Claude Assistant
-        uses: ./  # Adjust path as needed for your Gitea setup
+        uses: ./ # Adjust path as needed for your Gitea setup
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
 ### 2. Gitea Limitations
+
 Be aware of these Gitea Actions limitations:
 
 - **`issue_comment` on PRs**: May not trigger reliably in some Gitea versions
@@ -105,16 +112,19 @@ Be aware of these Gitea Actions limitations:
 ### 3. Gitea Workarounds
 
 #### For PR Comments
+
 Use `issue_comment` instead of `pull_request_review_comment`:
 
 ```yaml
 on:
   issue_comment:
-    types: [created]  # This covers both issue and PR comments
+    types: [created] # This covers both issue and PR comments
 ```
 
 #### For Code Review Comments
+
 Gitea has limited support for code review comment webhooks. Consider using:
+
 - Regular issue comments on PRs
 - Manual trigger via issue assignment
 - Custom webhooks (advanced setup)
@@ -122,21 +132,25 @@ Gitea has limited support for code review comment webhooks. Consider using:
 ## Benefits of Migration
 
 ### 1. Simplified Authentication
+
 - No OIDC token setup required
 - Uses standard workflow tokens
 - Works with custom GitHub tokens
 
 ### 2. Provider Independence
+
 - No dependency on Anthropic's GitHub App service
 - Works with any Git provider supporting Actions
 - Self-contained functionality
 
 ### 3. Enhanced Control
+
 - Direct control over Claude execution
 - Customizable tool management
 - Easier debugging and modifications
 
 ### 4. Gitea Support
+
 - Compatible with self-hosted Gitea
 - Automatic fallback to REST API (no GraphQL dependency)
 - Simplified permission checking for Gitea environments
@@ -148,8 +162,10 @@ Gitea has limited support for code review comment webhooks. Consider using:
 ### Common Issues
 
 #### 1. Token Permissions
+
 **Error**: "GitHub token authentication failed"
 **Solution**: Ensure workflow has required permissions:
+
 ```yaml
 permissions:
   contents: write
@@ -158,36 +174,45 @@ permissions:
 ```
 
 #### 2. Gitea Trigger Issues
+
 **Error**: Workflow not triggering on PR comments
 **Solution**: Use `issue_comment` instead of `pull_request_review_comment`
 
 #### 3. Missing Dependencies
+
 **Error**: "Module not found" or TypeScript errors
 **Solution**: Run `npm install` or `bun install` to update dependencies
 
 ### Gitea-Specific Issues
 
 #### 1. Authentication Errors
+
 **Error**: "Failed to check permissions: HttpError: Bad credentials"
 **Solution**: This is normal in Gitea environments. The action automatically detects Gitea and bypasses GitHub-specific permission checks.
 
 #### 1a. User Profile API Errors
+
 **Error**: "Prepare step failed with error: Visit Project" or "GET /users/{username} - 404"
 **Solution**: This occurs when Gitea's user profile API differs from GitHub's. The action automatically detects Gitea and skips user type validation.
 
 #### 2. Limited Event Support
+
 Some GitHub Events may not be fully supported in Gitea. Use basic triggers:
+
 - `issue_comment` for comments
 - `issues` for issue events
 - `push` for code changes
 
 #### 3. Token Scope Limitations
+
 Gitea tokens may have different scope limitations. Ensure your Gitea instance allows:
+
 - Repository write access
 - Issue/PR comment creation
 - Branch creation and updates
 
 #### 4. GraphQL Not Supported
+
 **Error**: GraphQL queries failing
 **Solution**: The action automatically detects Gitea and uses REST API instead of GraphQL. No manual configuration needed.
 
@@ -204,5 +229,6 @@ Gitea tokens may have different scope limitations. Ensure your Gitea instance al
 ## Example Workflows
 
 See the `examples/` directory for complete workflow examples:
+
 - `claude.yml` - Updated GitHub Actions workflow
 - `gitea-claude.yml` - Gitea-compatible workflow

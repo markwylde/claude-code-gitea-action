@@ -96,7 +96,7 @@ export async function setupBranch(
     // Get the SHA of the source branch
     // For Gitea, try using the branches endpoint instead of git/refs
     let currentSHA: string;
-    
+
     try {
       // First try the GitHub-compatible git.getRef approach
       const sourceBranchRef = await octokits.rest.git.getRef({
@@ -107,14 +107,16 @@ export async function setupBranch(
       currentSHA = sourceBranchRef.data.object.sha;
     } catch (gitRefError: any) {
       // If git/refs fails (like in Gitea), use the branches endpoint
-      console.log(`git/refs failed, trying branches endpoint: ${gitRefError.message}`);
+      console.log(
+        `git/refs failed, trying branches endpoint: ${gitRefError.message}`,
+      );
       const branchResponse = await octokits.rest.repos.getBranch({
         owner,
         repo,
         branch: sourceBranch,
       });
-      // Gitea uses commit.id instead of commit.sha
-      currentSHA = branchResponse.data.commit.sha || branchResponse.data.commit.id;
+      // GitHub and Gitea both use commit.sha
+      currentSHA = branchResponse.data.commit.sha;
     }
 
     console.log(`Current SHA: ${currentSHA}`);
@@ -127,18 +129,22 @@ export async function setupBranch(
         ref: `refs/heads/${newBranch}`,
         sha: currentSHA,
       });
-      
+
       console.log(`Successfully created branch via API: ${newBranch}`);
     } catch (createRefError: any) {
       // If git/refs creation fails (like in Gitea), that's expected
-      // We'll create the branch when we push files later
-      console.log(`git createRef failed (expected for Gitea): ${createRefError.message}`);
+      // Log the error details but continue - the branch will be created when we push files
+      console.log(
+        `git createRef failed (expected for Gitea): ${createRefError.message}`,
+      );
+      console.log(`Error status: ${createRefError.status}`);
       console.log(`Branch ${newBranch} will be created when files are pushed`);
+
+      // For Gitea, we can still proceed since the MCP server will create the branch on first push
+      // This is actually the preferred method for Gitea
     }
 
-    console.log(
-      `Branch setup completed for: ${newBranch}`,
-    );
+    console.log(`Branch setup completed for: ${newBranch}`);
 
     // Set outputs for GitHub Actions
     core.setOutput("CLAUDE_BRANCH", newBranch);

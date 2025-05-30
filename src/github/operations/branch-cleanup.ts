@@ -34,9 +34,49 @@ export async function checkAndDeleteEmptyBranch(
       }
     } catch (error) {
       console.error("Error checking for commits on Claude branch:", error);
-      // If we can't check, assume the branch has commits to be safe
-      const branchUrl = `${GITHUB_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
-      branchLink = `\n[View branch](${branchUrl})`;
+
+      // For Gitea compatibility, try alternative approach using branches endpoint
+      try {
+        console.log(
+          "Trying alternative branch comparison for Gitea compatibility...",
+        );
+
+        // Get the branch info to see if it exists and has commits
+        const branchResponse = await octokit.rest.repos.getBranch({
+          owner,
+          repo,
+          branch: claudeBranch,
+        });
+
+        // Get base branch info for comparison
+        const baseResponse = await octokit.rest.repos.getBranch({
+          owner,
+          repo,
+          branch: baseBranch,
+        });
+
+        const branchSha = branchResponse.data.commit.sha;
+        const baseSha = baseResponse.data.commit.sha;
+
+        // If SHAs are different, assume there are commits
+        if (branchSha !== baseSha) {
+          console.log(
+            `Branch ${claudeBranch} appears to have commits (different SHA from base)`,
+          );
+          const branchUrl = `${GITHUB_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
+          branchLink = `\n[View branch](${branchUrl})`;
+        } else {
+          console.log(
+            `Branch ${claudeBranch} has same SHA as base, marking for deletion`,
+          );
+          shouldDeleteBranch = true;
+        }
+      } catch (fallbackError) {
+        console.error("Fallback branch comparison also failed:", fallbackError);
+        // If all checks fail, assume the branch has commits to be safe
+        const branchUrl = `${GITHUB_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
+        branchLink = `\n[View branch](${branchUrl})`;
+      }
     }
   }
 
@@ -49,9 +89,18 @@ export async function checkAndDeleteEmptyBranch(
         ref: `heads/${claudeBranch}`,
       });
       console.log(`✅ Deleted empty branch: ${claudeBranch}`);
-    } catch (deleteError) {
+    } catch (deleteError: any) {
       console.error(`Failed to delete branch ${claudeBranch}:`, deleteError);
-      // Continue even if deletion fails
+      console.log(`Delete error status: ${deleteError.status}`);
+
+      // For Gitea, branch deletion might not be supported via API
+      if (deleteError.status === 405 || deleteError.status === 404) {
+        console.log(
+          "Branch deletion not supported or branch doesn't exist remotely - this is expected for Gitea",
+        );
+      }
+
+      // Continue even if deletion fails - this is not critical
     }
   }
 

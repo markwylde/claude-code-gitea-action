@@ -10,8 +10,12 @@ async function main() {
       model: process.env.ANTHROPIC_MODEL || process.env.MODEL,
       promptFile: process.env.PROMPT_FILE,
       prompt: process.env.PROMPT,
-      maxTurns: process.env.MAX_TURNS ? parseInt(process.env.MAX_TURNS) : undefined,
-      timeoutMinutes: process.env.TIMEOUT_MINUTES ? parseInt(process.env.TIMEOUT_MINUTES) : 30,
+      maxTurns: process.env.MAX_TURNS
+        ? parseInt(process.env.MAX_TURNS)
+        : undefined,
+      timeoutMinutes: process.env.TIMEOUT_MINUTES
+        ? parseInt(process.env.TIMEOUT_MINUTES)
+        : 30,
       mcpConfig: process.env.MCP_CONFIG,
       allowedTools: process.env.ALLOWED_TOOLS,
       disallowedTools: process.env.DISALLOWED_TOOLS,

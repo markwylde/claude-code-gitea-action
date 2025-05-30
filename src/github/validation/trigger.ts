@@ -15,7 +15,9 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
     inputs: { assigneeTrigger, triggerPhrase, directPrompt },
   } = context;
 
-  console.log(`Checking trigger: event=${context.eventName}, action=${context.eventAction}, phrase='${triggerPhrase}', assignee='${assigneeTrigger}', direct='${directPrompt}'`);
+  console.log(
+    `Checking trigger: event=${context.eventName}, action=${context.eventAction}, phrase='${triggerPhrase}', assignee='${assigneeTrigger}', direct='${directPrompt}'`,
+  );
 
   // If direct prompt is provided, always trigger
   if (directPrompt) {
@@ -29,7 +31,9 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
     let triggerUser = assigneeTrigger?.replace(/^@/, "") || "";
     const assigneeUsername = context.payload.issue.assignee?.login || "";
 
-    console.log(`Checking assignee trigger: user='${triggerUser}', assignee='${assigneeUsername}'`);
+    console.log(
+      `Checking assignee trigger: user='${triggerUser}', assignee='${assigneeUsername}'`,
+    );
 
     if (triggerUser && assigneeUsername === triggerUser) {
       console.log(`Issue assigned to trigger user '${triggerUser}'`);

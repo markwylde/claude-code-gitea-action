@@ -114,7 +114,7 @@ runs:
         USE_BEDROCK: ${{ inputs.use_bedrock }}
         USE_VERTEX: ${{ inputs.use_vertex }}
         ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
-        
+
         # GitHub token for repository access
         GITHUB_TOKEN: ${{ steps.prepare.outputs.GITHUB_TOKEN }}
 
@@ -163,4 +163,3 @@ runs:
         echo '```json' >> $GITHUB_STEP_SUMMARY
         cat "${{ steps.claude-code.outputs.execution_file }}" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
-

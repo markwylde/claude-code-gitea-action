@@ -133,7 +133,68 @@ async function run() {
           }
         } catch (error) {
           console.error("Error checking for changes in branch:", error);
-          // Don't fail the entire update if we can't check for changes
+
+          // For Gitea compatibility, try alternative approach
+          try {
+            console.log(
+              "Trying alternative branch comparison for Gitea compatibility...",
+            );
+
+            // Get the branch info to see if it exists and has commits
+            const branchResponse = await octokit.rest.repos.getBranch({
+              owner,
+              repo,
+              branch: claudeBranch,
+            });
+
+            // Get base branch info for comparison
+            const baseResponse = await octokit.rest.repos.getBranch({
+              owner,
+              repo,
+              branch: baseBranch,
+            });
+
+            const branchSha = branchResponse.data.commit.sha;
+            const baseSha = baseResponse.data.commit.sha;
+
+            // If SHAs are different, assume there are changes and add PR link
+            if (branchSha !== baseSha) {
+              console.log(
+                `Branch ${claudeBranch} appears to have changes (different SHA from base)`,
+              );
+              const entityType = context.isPR ? "PR" : "Issue";
+              const prTitle = encodeURIComponent(
+                `${entityType} #${context.entityNumber}: Changes from Claude`,
+              );
+              const prBody = encodeURIComponent(
+                `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
+              );
+              const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
+              prLink = `\n[Create a PR](${prUrl})`;
+            } else {
+              console.log(
+                `Branch ${claudeBranch} has same SHA as base, no PR link needed`,
+              );
+            }
+          } catch (fallbackError) {
+            console.error(
+              "Fallback branch comparison also failed:",
+              fallbackError,
+            );
+            // If all checks fail, still add PR link to be safe
+            console.log(
+              "Adding PR link as fallback since we can't determine branch status",
+            );
+            const entityType = context.isPR ? "PR" : "Issue";
+            const prTitle = encodeURIComponent(
+              `${entityType} #${context.entityNumber}: Changes from Claude`,
+            );
+            const prBody = encodeURIComponent(
+              `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
+            );
+            const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
+            prLink = `\n[Create a PR](${prUrl})`;
+          }
         }
       }
     }
