@@ -25,12 +25,17 @@ export class GiteaApiClient {
     this.baseUrl = baseUrl.replace(/\/+$/, ""); // Remove trailing slashes
   }
 
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
   private async request<T = any>(
     method: string,
     endpoint: string,
     body?: any,
   ): Promise<GiteaApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
+    console.log(`Making ${method} request to: ${url}`);
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
