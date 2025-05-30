@@ -6,6 +6,14 @@ export async function prepareMcpConfig(
   repo: string,
   branch: string,
 ): Promise<string> {
+  console.log("[MCP-INSTALL] Preparing MCP configuration...");
+  console.log(`[MCP-INSTALL] Owner: ${owner}`);
+  console.log(`[MCP-INSTALL] Repo: ${repo}`);
+  console.log(`[MCP-INSTALL] Branch: ${branch}`);
+  console.log(`[MCP-INSTALL] GitHub token: ${githubToken ? '***' : 'undefined'}`);
+  console.log(`[MCP-INSTALL] GITHUB_ACTION_PATH: ${process.env.GITHUB_ACTION_PATH}`);
+  console.log(`[MCP-INSTALL] GITHUB_WORKSPACE: ${process.env.GITHUB_WORKSPACE}`);
+  
   try {
     const mcpConfig = {
       mcpServers: {
@@ -42,8 +50,14 @@ export async function prepareMcpConfig(
       },
     };
 
-    return JSON.stringify(mcpConfig, null, 2);
+    const configString = JSON.stringify(mcpConfig, null, 2);
+    console.log("[MCP-INSTALL] Generated MCP configuration:");
+    console.log(configString);
+    console.log("[MCP-INSTALL] MCP config generation completed successfully");
+    
+    return configString;
   } catch (error) {
+    console.error("[MCP-INSTALL] MCP config generation failed:", error);
     core.setFailed(`Install MCP server failed with error: ${error}`);
     process.exit(1);
   }

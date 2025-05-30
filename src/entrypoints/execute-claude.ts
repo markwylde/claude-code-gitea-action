@@ -5,6 +5,17 @@ import { runClaude, type ClaudeExecutorConfig } from "../claude/executor";
 
 async function main() {
   try {
+    console.log("[EXECUTE-CLAUDE] Starting execute-claude.ts entry point...");
+    console.log(`[EXECUTE-CLAUDE] ANTHROPIC_API_KEY: ${process.env.ANTHROPIC_API_KEY ? '***' : 'undefined'}`);
+    console.log(`[EXECUTE-CLAUDE] MODEL: ${process.env.MODEL || 'undefined'}`);
+    console.log(`[EXECUTE-CLAUDE] ANTHROPIC_MODEL: ${process.env.ANTHROPIC_MODEL || 'undefined'}`);
+    console.log(`[EXECUTE-CLAUDE] PROMPT_FILE: ${process.env.PROMPT_FILE || 'undefined'}`);
+    console.log(`[EXECUTE-CLAUDE] ALLOWED_TOOLS: ${process.env.ALLOWED_TOOLS || 'undefined'}`);
+    console.log(`[EXECUTE-CLAUDE] DISALLOWED_TOOLS: ${process.env.DISALLOWED_TOOLS || 'undefined'}`);
+    console.log(`[EXECUTE-CLAUDE] MCP_CONFIG length: ${process.env.MCP_CONFIG?.length || 0}`);
+    console.log(`[EXECUTE-CLAUDE] USE_BEDROCK: ${process.env.USE_BEDROCK}`);
+    console.log(`[EXECUTE-CLAUDE] USE_VERTEX: ${process.env.USE_VERTEX}`);
+    
     const config: ClaudeExecutorConfig = {
       apiKey: process.env.ANTHROPIC_API_KEY,
       model: process.env.ANTHROPIC_MODEL || process.env.MODEL,
@@ -23,7 +34,7 @@ async function main() {
       useVertex: process.env.USE_VERTEX === "true",
     };
 
-    console.log("Starting Claude execution...");
+    console.log("[EXECUTE-CLAUDE] Configuration prepared, starting Claude execution...");
     const result = await runClaude(config);
 
     // Set outputs for GitHub Actions
