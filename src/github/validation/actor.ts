@@ -26,7 +26,10 @@ export async function checkHumanActor(
 
   try {
     // Fetch user information from GitHub API
-    const response = await api.customRequest("GET", `/api/v1/users/${githubContext.actor}`);
+    const response = await api.customRequest(
+      "GET",
+      `/api/v1/users/${githubContext.actor}`,
+    );
     const userData = response.data;
 
     const actorType = userData.type;

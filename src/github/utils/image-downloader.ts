@@ -46,6 +46,8 @@ export async function downloadCommentImages(
 ): Promise<Map<string, string>> {
   // Temporarily simplified - return empty map to avoid Octokit dependencies
   // TODO: Implement image downloading with direct Gitea API calls if needed
-  console.log("Image downloading temporarily disabled during Octokit migration");
+  console.log(
+    "Image downloading temporarily disabled during Octokit migration",
+  );
   return new Map<string, string>();
 }

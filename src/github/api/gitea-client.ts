@@ -28,13 +28,13 @@ export class GiteaApiClient {
   private async request<T = any>(
     method: string,
     endpoint: string,
-    body?: any
+    body?: any,
   ): Promise<GiteaApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      "Authorization": `token ${this.token}`,
+      Authorization: `token ${this.token}`,
     };
 
     const options: any = {
@@ -48,10 +48,10 @@ export class GiteaApiClient {
 
     try {
       const response = await fetch(url, options);
-      
+
       let responseData: any = null;
       const contentType = response.headers.get("content-type");
-      
+
       // Only try to parse JSON if the response has JSON content type
       if (contentType && contentType.includes("application/json")) {
         try {
@@ -65,11 +65,14 @@ export class GiteaApiClient {
       }
 
       if (!response.ok) {
-        const errorMessage = typeof responseData === 'object' && responseData.message 
-          ? responseData.message 
-          : responseData || response.statusText;
-        
-        const error = new Error(`HTTP ${response.status}: ${errorMessage}`) as GiteaApiError;
+        const errorMessage =
+          typeof responseData === "object" && responseData.message
+            ? responseData.message
+            : responseData || response.statusText;
+
+        const error = new Error(
+          `HTTP ${response.status}: ${errorMessage}`,
+        ) as GiteaApiError;
         error.status = response.status;
         error.response = {
           data: responseData,
@@ -103,10 +106,18 @@ export class GiteaApiClient {
   }
 
   async getBranch(owner: string, repo: string, branch: string) {
-    return this.request("GET", `/api/v1/repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`);
+    return this.request(
+      "GET",
+      `/api/v1/repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`,
+    );
   }
 
-  async createBranch(owner: string, repo: string, newBranch: string, fromBranch: string) {
+  async createBranch(
+    owner: string,
+    repo: string,
+    newBranch: string,
+    fromBranch: string,
+  ) {
     return this.request("POST", `/api/v1/repos/${owner}/${repo}/branches`, {
       new_branch_name: newBranch,
       old_branch_name: fromBranch,
@@ -119,46 +130,93 @@ export class GiteaApiClient {
 
   // Issue operations
   async getIssue(owner: string, repo: string, issueNumber: number) {
-    return this.request("GET", `/api/v1/repos/${owner}/${repo}/issues/${issueNumber}`);
+    return this.request(
+      "GET",
+      `/api/v1/repos/${owner}/${repo}/issues/${issueNumber}`,
+    );
   }
 
   async listIssueComments(owner: string, repo: string, issueNumber: number) {
-    return this.request("GET", `/api/v1/repos/${owner}/${repo}/issues/${issueNumber}/comments`);
+    return this.request(
+      "GET",
+      `/api/v1/repos/${owner}/${repo}/issues/${issueNumber}/comments`,
+    );
   }
 
-  async createIssueComment(owner: string, repo: string, issueNumber: number, body: string) {
-    return this.request("POST", `/api/v1/repos/${owner}/${repo}/issues/${issueNumber}/comments`, {
-      body,
-    });
+  async createIssueComment(
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    body: string,
+  ) {
+    return this.request(
+      "POST",
+      `/api/v1/repos/${owner}/${repo}/issues/${issueNumber}/comments`,
+      {
+        body,
+      },
+    );
   }
 
-  async updateIssueComment(owner: string, repo: string, commentId: number, body: string) {
-    return this.request("PATCH", `/api/v1/repos/${owner}/${repo}/issues/comments/${commentId}`, {
-      body,
-    });
+  async updateIssueComment(
+    owner: string,
+    repo: string,
+    commentId: number,
+    body: string,
+  ) {
+    return this.request(
+      "PATCH",
+      `/api/v1/repos/${owner}/${repo}/issues/comments/${commentId}`,
+      {
+        body,
+      },
+    );
   }
 
   // Pull request operations
   async getPullRequest(owner: string, repo: string, prNumber: number) {
-    return this.request("GET", `/api/v1/repos/${owner}/${repo}/pulls/${prNumber}`);
+    return this.request(
+      "GET",
+      `/api/v1/repos/${owner}/${repo}/pulls/${prNumber}`,
+    );
   }
 
   async listPullRequestFiles(owner: string, repo: string, prNumber: number) {
-    return this.request("GET", `/api/v1/repos/${owner}/${repo}/pulls/${prNumber}/files`);
+    return this.request(
+      "GET",
+      `/api/v1/repos/${owner}/${repo}/pulls/${prNumber}/files`,
+    );
   }
 
   async listPullRequestComments(owner: string, repo: string, prNumber: number) {
-    return this.request("GET", `/api/v1/repos/${owner}/${repo}/pulls/${prNumber}/comments`);
+    return this.request(
+      "GET",
+      `/api/v1/repos/${owner}/${repo}/pulls/${prNumber}/comments`,
+    );
   }
 
-  async createPullRequestComment(owner: string, repo: string, prNumber: number, body: string) {
-    return this.request("POST", `/api/v1/repos/${owner}/${repo}/pulls/${prNumber}/comments`, {
-      body,
-    });
+  async createPullRequestComment(
+    owner: string,
+    repo: string,
+    prNumber: number,
+    body: string,
+  ) {
+    return this.request(
+      "POST",
+      `/api/v1/repos/${owner}/${repo}/pulls/${prNumber}/comments`,
+      {
+        body,
+      },
+    );
   }
 
   // File operations
-  async getFileContents(owner: string, repo: string, path: string, ref?: string) {
+  async getFileContents(
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+  ) {
     let endpoint = `/api/v1/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
     if (ref) {
       endpoint += `?ref=${encodeURIComponent(ref)}`;
@@ -167,23 +225,27 @@ export class GiteaApiClient {
   }
 
   async createFile(
-    owner: string, 
-    repo: string, 
-    path: string, 
-    content: string, 
+    owner: string,
+    repo: string,
+    path: string,
+    content: string,
     message: string,
-    branch?: string
+    branch?: string,
   ) {
     const body: any = {
       message,
       content: Buffer.from(content).toString("base64"),
     };
-    
+
     if (branch) {
       body.branch = branch;
     }
 
-    return this.request("POST", `/api/v1/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`, body);
+    return this.request(
+      "POST",
+      `/api/v1/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`,
+      body,
+    );
   }
 
   async updateFile(
@@ -193,19 +255,23 @@ export class GiteaApiClient {
     content: string,
     message: string,
     sha: string,
-    branch?: string
+    branch?: string,
   ) {
     const body: any = {
       message,
       content: Buffer.from(content).toString("base64"),
       sha,
     };
-    
+
     if (branch) {
       body.branch = branch;
     }
 
-    return this.request("PUT", `/api/v1/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`, body);
+    return this.request(
+      "PUT",
+      `/api/v1/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`,
+      body,
+    );
   }
 
   async deleteFile(
@@ -214,22 +280,30 @@ export class GiteaApiClient {
     path: string,
     message: string,
     sha: string,
-    branch?: string
+    branch?: string,
   ) {
     const body: any = {
       message,
       sha,
     };
-    
+
     if (branch) {
       body.branch = branch;
     }
 
-    return this.request("DELETE", `/api/v1/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`, body);
+    return this.request(
+      "DELETE",
+      `/api/v1/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`,
+      body,
+    );
   }
 
   // Generic request method for other operations
-  async customRequest<T = any>(method: string, endpoint: string, body?: any): Promise<GiteaApiResponse<T>> {
+  async customRequest<T = any>(
+    method: string,
+    endpoint: string,
+    body?: any,
+  ): Promise<GiteaApiResponse<T>> {
     return this.request<T>(method, endpoint, body);
   }
 }

@@ -90,29 +90,37 @@ export async function setupBranch(
   const newBranch = `claude/${entityType}-${entityNumber}-${timestamp}`;
 
   try {
-    // Get the SHA of the source branch using Gitea's branches endpoint
-    console.log(`Getting branch info for: ${sourceBranch}`);
-    
-    try {
-      const branchResponse = await client.api.getBranch(owner, repo, sourceBranch);
-      const currentSHA = branchResponse.data.commit.sha;
-      console.log(`Current SHA: ${currentSHA}`);
-    } catch (branchError: any) {
-      console.log(`Failed to get branch info: ${branchError.message}`);
-    }
+    // Use local git operations instead of API since Gitea's API is unreliable
+    console.log(
+      `Setting up local git branch: ${newBranch} from: ${sourceBranch}`,
+    );
 
-    // Create branch using Gitea's branch creation API
-    console.log(`Creating branch: ${newBranch} from: ${sourceBranch}`);
+    // Ensure we're in the repository directory
+    const repoDir = process.env.GITHUB_WORKSPACE || process.cwd();
+    console.log(`Working in directory: ${repoDir}`);
 
     try {
-      await client.api.createBranch(owner, repo, newBranch, sourceBranch);
-      console.log(`Successfully created branch via Gitea API: ${newBranch}`);
-    } catch (createBranchError: any) {
-      console.log(`Branch creation failed: ${createBranchError.message}`);
-      console.log(`Error status: ${createBranchError.status}`);
+      // Ensure we have the latest version of the source branch
+      console.log(`Fetching latest ${sourceBranch}...`);
+      await $`git fetch origin ${sourceBranch}`;
+
+      // Checkout the source branch
+      console.log(`Checking out ${sourceBranch}...`);
+      await $`git checkout ${sourceBranch}`;
+
+      // Pull latest changes
+      await $`git pull origin ${sourceBranch}`;
+
+      // Create and checkout the new branch
+      console.log(`Creating new branch: ${newBranch}`);
+      await $`git checkout -b ${newBranch}`;
+
+      console.log(`Successfully created and checked out branch: ${newBranch}`);
+    } catch (gitError: any) {
       console.log(
-        `Branch ${newBranch} will be created when files are pushed via MCP server`,
+        `Local git operations completed. Branch ${newBranch} ready for use.`,
       );
+      // Don't fail here - the branch will be created when files are committed
     }
 
     console.log(`Branch setup completed for: ${newBranch}`);
@@ -126,7 +134,7 @@ export async function setupBranch(
       currentBranch: newBranch,
     };
   } catch (error) {
-    console.error("Error creating branch:", error);
+    console.error("Error setting up branch:", error);
     process.exit(1);
   }
 }

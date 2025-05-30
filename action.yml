@@ -47,6 +47,9 @@ inputs:
   github_token:
     description: "GitHub token with repo and pull request permissions (defaults to GITHUB_TOKEN)"
     required: false
+  gitea_api_url:
+    description: "Gitea API URL (e.g., https://gitea.example.com/api/v1, defaults to GitHub API)"
+    required: false
   use_bedrock:
     description: "Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API"
     required: false
@@ -95,6 +98,7 @@ runs:
         OVERRIDE_GITHUB_TOKEN: ${{ inputs.github_token }}
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_RUN_ID: ${{ github.run_id }}
+        GITEA_API_URL: ${{ inputs.gitea_api_url }}
 
     - name: Run Claude Code
       id: claude-code
@@ -117,6 +121,7 @@ runs:
 
         # GitHub token for repository access
         GITHUB_TOKEN: ${{ steps.prepare.outputs.GITHUB_TOKEN }}
+        GITEA_API_URL: ${{ inputs.gitea_api_url }}
 
         # Provider configuration (for future cloud provider support)
         ANTHROPIC_BASE_URL: ${{ env.ANTHROPIC_BASE_URL }}
@@ -154,6 +159,7 @@ runs:
         TRIGGER_USERNAME: ${{ github.event.comment.user.login || github.event.issue.user.login || github.event.pull_request.user.login || github.event.sender.login || github.triggering_actor || github.actor || '' }}
         PREPARE_SUCCESS: ${{ steps.prepare.outcome == 'success' }}
         PREPARE_ERROR: ${{ steps.prepare.outputs.prepare_error || '' }}
+        GITEA_API_URL: ${{ inputs.gitea_api_url }}
 
     - name: Display Claude Code Report
       if: steps.prepare.outputs.contains_trigger == 'true' && steps.claude-code.outputs.execution_file != ''

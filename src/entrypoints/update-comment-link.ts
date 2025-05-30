@@ -37,7 +37,10 @@ async function run() {
       if (isPullRequestReviewCommentEvent(context)) {
         // For PR review comments, use the pulls API
         console.log(`Fetching PR review comment ${commentId}`);
-        const response = await client.api.customRequest("GET", `/api/v1/repos/${owner}/${repo}/pulls/comments/${commentId}`);
+        const response = await client.api.customRequest(
+          "GET",
+          `/api/v1/repos/${owner}/${repo}/pulls/comments/${commentId}`,
+        );
         comment = response.data;
         isPRReviewComment = true;
         console.log("Successfully fetched as PR review comment");
@@ -46,7 +49,10 @@ async function run() {
       // For all other event types, use the issues API
       if (!comment) {
         console.log(`Fetching issue comment ${commentId}`);
-        const response = await client.api.customRequest("GET", `/api/v1/repos/${owner}/${repo}/issues/comments/${commentId}`);
+        const response = await client.api.customRequest(
+          "GET",
+          `/api/v1/repos/${owner}/${repo}/issues/comments/${commentId}`,
+        );
         comment = response.data;
         isPRReviewComment = false;
         console.log("Successfully fetched as issue comment");
@@ -61,7 +67,11 @@ async function run() {
 
       // Try to get the PR info to understand the comment structure
       try {
-        const pr = await client.api.getPullRequest(owner, repo, context.entityNumber);
+        const pr = await client.api.getPullRequest(
+          owner,
+          repo,
+          context.entityNumber,
+        );
         console.log(`PR state: ${pr.data.state}`);
         console.log(`PR comments count: ${pr.data.comments}`);
         console.log(`PR review comments count: ${pr.data.review_comments}`);
@@ -100,10 +110,18 @@ async function run() {
 
         try {
           // Get the branch info to see if it exists and has commits
-          const branchResponse = await client.api.getBranch(owner, repo, claudeBranch);
+          const branchResponse = await client.api.getBranch(
+            owner,
+            repo,
+            claudeBranch,
+          );
 
           // Get base branch info for comparison
-          const baseResponse = await client.api.getBranch(owner, repo, baseBranch);
+          const baseResponse = await client.api.getBranch(
+            owner,
+            repo,
+            baseBranch,
+          );
 
           const branchSha = branchResponse.data.commit.sha;
           const baseSha = baseResponse.data.commit.sha;
@@ -223,11 +241,20 @@ async function run() {
     // Update the comment using the appropriate API
     try {
       if (isPRReviewComment) {
-        await client.api.customRequest("PATCH", `/api/v1/repos/${owner}/${repo}/pulls/comments/${commentId}`, {
-          body: updatedBody,
-        });
+        await client.api.customRequest(
+          "PATCH",
+          `/api/v1/repos/${owner}/${repo}/pulls/comments/${commentId}`,
+          {
+            body: updatedBody,
+          },
+        );
       } else {
-        await client.api.updateIssueComment(owner, repo, commentId, updatedBody);
+        await client.api.updateIssueComment(
+          owner,
+          repo,
+          commentId,
+          updatedBody,
+        );
       }
       console.log(
         `✅ Updated ${isPRReviewComment ? "PR review" : "issue"} comment ${commentId} with job link`,

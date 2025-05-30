@@ -50,7 +50,11 @@ export async function fetchGitHubData({
     // Use REST API for all requests (works with both GitHub and Gitea)
     if (isPR) {
       console.log(`Fetching PR #${prNumber} data using REST API`);
-      const prResponse = await client.api.getPullRequest(owner, repo, parseInt(prNumber));
+      const prResponse = await client.api.getPullRequest(
+        owner,
+        repo,
+        parseInt(prNumber),
+      );
 
       contextData = {
         title: prResponse.data.title,
@@ -74,7 +78,7 @@ export async function fetchGitHubData({
         const commentsResponse = await client.api.listIssueComments(
           owner,
           repo,
-          parseInt(prNumber)
+          parseInt(prNumber),
         );
         comments = commentsResponse.data.map((comment: any) => ({
           id: comment.id.toString(),
@@ -93,7 +97,7 @@ export async function fetchGitHubData({
         const filesResponse = await client.api.listPullRequestFiles(
           owner,
           repo,
-          parseInt(prNumber)
+          parseInt(prNumber),
         );
         changedFiles = filesResponse.data.map((file: any) => ({
           path: file.filename,
@@ -109,7 +113,11 @@ export async function fetchGitHubData({
       reviewData = { nodes: [] }; // Simplified for Gitea
     } else {
       console.log(`Fetching issue #${prNumber} data using REST API`);
-      const issueResponse = await client.api.getIssue(owner, repo, parseInt(prNumber));
+      const issueResponse = await client.api.getIssue(
+        owner,
+        repo,
+        parseInt(prNumber),
+      );
 
       contextData = {
         title: issueResponse.data.title,
@@ -125,7 +133,7 @@ export async function fetchGitHubData({
         const commentsResponse = await client.api.listIssueComments(
           owner,
           repo,
-          parseInt(prNumber)
+          parseInt(prNumber),
         );
         comments = commentsResponse.data.map((comment: any) => ({
           id: comment.id.toString(),
@@ -143,7 +151,6 @@ export async function fetchGitHubData({
     console.error(`Failed to fetch ${isPR ? "PR" : "issue"} data:`, error);
     throw new Error(`Failed to fetch ${isPR ? "PR" : "issue"} data`);
   }
-
 
   // Compute SHAs for changed files
   let changedFilesWithSHA: GitHubFileWithSHA[] = [];

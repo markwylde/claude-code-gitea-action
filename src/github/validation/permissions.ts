@@ -28,7 +28,10 @@ export async function checkWritePermissions(
     core.info(`Checking permissions for actor: ${actor}`);
 
     // Check permissions directly using the permission endpoint
-    const response = await api.customRequest("GET", `/api/v1/repos/${repository.owner}/${repository.repo}/collaborators/${actor}/permission`);
+    const response = await api.customRequest(
+      "GET",
+      `/api/v1/repos/${repository.owner}/${repository.repo}/collaborators/${actor}/permission`,
+    );
 
     const permissionLevel = response.data.permission;
     core.info(`Permission level retrieved: ${permissionLevel}`);

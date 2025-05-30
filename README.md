@@ -69,25 +69,61 @@ jobs:
 
 ## Inputs
 
-| Input                 | Description                                                                                                          | Required | Default   |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------- | -------- | --------- |
-| `anthropic_api_key`   | Anthropic API key (required for direct API, not needed for Bedrock/Vertex)                                           | No\*     | -         |
-| `direct_prompt`       | Direct prompt for Claude to execute automatically without needing a trigger (for automated workflows)                | No       | -         |
-| `timeout_minutes`     | Timeout in minutes for execution                                                                                     | No       | `30`      |
-| `github_token`        | GitHub token for Claude to operate with. **Only include this if you're connecting a custom GitHub app of your own!** | No       | -         |
-| `model`               | Model to use (provider-specific format required for Bedrock/Vertex)                                                  | No       | -         |
-| `anthropic_model`     | **DEPRECATED**: Use `model` instead. Kept for backward compatibility.                                                | No       | -         |
-| `use_bedrock`         | Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API                                          | No       | `false`   |
-| `use_vertex`          | Use Google Vertex AI with OIDC authentication instead of direct Anthropic API                                        | No       | `false`   |
-| `allowed_tools`       | Additional tools for Claude to use (the base GitHub tools will always be included)                                   | No       | ""        |
-| `disallowed_tools`    | Tools that Claude should never use                                                                                   | No       | ""        |
-| `custom_instructions` | Additional custom instructions to include in the prompt for Claude                                                   | No       | ""        |
-| `assignee_trigger`    | The assignee username that triggers the action (e.g. @claude). Only used for issue assignment                        | No       | -         |
-| `trigger_phrase`      | The trigger phrase to look for in comments, issue/PR bodies, and issue titles                                        | No       | `@claude` |
+| Input                 | Description                                                                                                          | Required | Default    |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------- | -------- | ---------- |
+| `anthropic_api_key`   | Anthropic API key (required for direct API, not needed for Bedrock/Vertex)                                           | No\*     | -          |
+| `direct_prompt`       | Direct prompt for Claude to execute automatically without needing a trigger (for automated workflows)                | No       | -          |
+| `timeout_minutes`     | Timeout in minutes for execution                                                                                     | No       | `30`       |
+| `github_token`        | GitHub token for Claude to operate with. **Only include this if you're connecting a custom GitHub app of your own!** | No       | -          |
+| `gitea_api_url`       | Gitea API URL (e.g., `https://gitea.example.com/api/v1`) for Gitea installations. Leave empty for GitHub.            | No       | GitHub API |
+| `model`               | Model to use (provider-specific format required for Bedrock/Vertex)                                                  | No       | -          |
+| `anthropic_model`     | **DEPRECATED**: Use `model` instead. Kept for backward compatibility.                                                | No       | -          |
+| `use_bedrock`         | Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API                                          | No       | `false`    |
+| `use_vertex`          | Use Google Vertex AI with OIDC authentication instead of direct Anthropic API                                        | No       | `false`    |
+| `allowed_tools`       | Additional tools for Claude to use (the base GitHub tools will always be included)                                   | No       | ""         |
+| `disallowed_tools`    | Tools that Claude should never use                                                                                   | No       | ""         |
+| `custom_instructions` | Additional custom instructions to include in the prompt for Claude                                                   | No       | ""         |
+| `assignee_trigger`    | The assignee username that triggers the action (e.g. @claude). Only used for issue assignment                        | No       | -          |
+| `trigger_phrase`      | The trigger phrase to look for in comments, issue/PR bodies, and issue titles                                        | No       | `@claude`  |
 
 \*Required when using direct Anthropic API (default and when not using Bedrock or Vertex)
 
 > **Note**: This action is currently in beta. Features and APIs may change as we continue to improve the integration.
+
+## Gitea Configuration
+
+This action has been enhanced to work with Gitea installations. The main differences from GitHub are:
+
+1. **Local Git Operations**: Instead of using API-based file operations (which have limited support in Gitea), this action uses local git commands to create branches, commit files, and push changes.
+
+2. **API URL Configuration**: You must specify your Gitea API URL using the `gitea_api_url` input.
+
+### Example Gitea Workflow
+
+```yaml
+name: Claude Assistant for Gitea
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  claude-response:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          gitea_api_url: "https://gitea.example.com/api/v1"
+          github_token: ${{ secrets.GITEA_TOKEN }}
+```
+
+### Gitea Setup Notes
+
+- Use a Gitea personal access token instead of `GITHUB_TOKEN`
+- The token needs repository read/write permissions
+- Claude will use local git operations for file changes and branch creation
+- Only PR creation and comment updates use the Gitea API
 
 ## Examples
 

@@ -23,11 +23,11 @@ export async function prepareMcpConfig(
             GITHUB_PERSONAL_ACCESS_TOKEN: githubToken,
           },
         },
-        github_file_ops: {
+        local_git_ops: {
           command: "bun",
           args: [
             "run",
-            `${process.env.GITHUB_ACTION_PATH}/src/mcp/github-file-ops-server.ts`,
+            `${process.env.GITHUB_ACTION_PATH}/src/mcp/local-git-ops-server.ts`,
           ],
           env: {
             GITHUB_TOKEN: githubToken,
@@ -35,6 +35,8 @@ export async function prepareMcpConfig(
             REPO_NAME: repo,
             BRANCH_NAME: branch,
             REPO_DIR: process.env.GITHUB_WORKSPACE || process.cwd(),
+            GITEA_API_URL:
+              process.env.GITEA_API_URL || "https://api.github.com",
           },
         },
       },

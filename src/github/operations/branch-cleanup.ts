@@ -17,7 +17,11 @@ export async function checkAndDeleteEmptyBranch(
 
     try {
       // Get the branch info to see if it exists and has commits
-      const branchResponse = await client.api.getBranch(owner, repo, claudeBranch);
+      const branchResponse = await client.api.getBranch(
+        owner,
+        repo,
+        claudeBranch,
+      );
 
       // Get base branch info for comparison
       const baseResponse = await client.api.getBranch(owner, repo, baseBranch);

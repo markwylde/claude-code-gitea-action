@@ -85,9 +85,9 @@ server.tool(
       // For now, throw an error indicating this functionality is not available.
       throw new Error(
         "Multi-file commits are not supported with Gitea. " +
-        "Gitea does not provide the low-level git API operations (trees, commits) " +
-        "that are required for atomic multi-file commits. " +
-        "Please commit files individually using the contents API."
+          "Gitea does not provide the low-level git API operations (trees, commits) " +
+          "that are required for atomic multi-file commits. " +
+          "Please commit files individually using the contents API.",
       );
 
       return {
@@ -158,9 +158,9 @@ server.tool(
       // For now, throw an error indicating this functionality is not available.
       throw new Error(
         "Multi-file deletions are not supported with Gitea. " +
-        "Gitea does not provide the low-level git API operations (trees, commits) " +
-        "that are required for atomic multi-file operations. " +
-        "Please delete files individually using the contents API."
+          "Gitea does not provide the low-level git API operations (trees, commits) " +
+          "that are required for atomic multi-file operations. " +
+          "Please delete files individually using the contents API.",
       );
 
       return {
