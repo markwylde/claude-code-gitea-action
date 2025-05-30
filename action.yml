@@ -92,7 +92,7 @@ runs:
       shell: bash
       run: |
         # Install Claude Code CLI via npm
-        npm install -g @anthropic-ai/claude-cli
+        npm install -g @anthropic-ai/claude-code
 
     - name: Prepare action
       id: prepare
