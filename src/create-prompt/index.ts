@@ -533,13 +533,15 @@ ${context.directPrompt ? `   - DIRECT INSTRUCTION: A direct instruction was prov
       ${
         eventData.isPR && !eventData.claudeBranch
           ? `
-      - Push directly using mcp__local_git_ops__commit_files to the existing branch (works for both new and existing files).
+      - Commit changes using mcp__local_git_ops__commit_files to the existing branch (works for both new and existing files).
       - Use mcp__local_git_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
+      - CRITICAL: After committing, you MUST push the branch to the remote repository using mcp__local_git_ops__push_branch
       - When pushing changes with this tool and TRIGGER_USERNAME is not "Unknown", include a "Co-authored-by: ${context.triggerUsername} <${context.triggerUsername}@users.noreply.github.com>" line in the commit message.`
           : `
       - You are already on the correct branch (${eventData.claudeBranch || "the PR branch"}). Do not create a new branch.
-      - Push changes directly to the current branch using mcp__local_git_ops__commit_files (works for both new and existing files)
+      - Commit changes using mcp__local_git_ops__commit_files (works for both new and existing files)
       - Use mcp__local_git_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
+      - CRITICAL: After committing, you MUST push the branch to the remote repository using mcp__local_git_ops__push_branch
       - When pushing changes and TRIGGER_USERNAME is not "Unknown", include a "Co-authored-by: ${context.triggerUsername} <${context.triggerUsername}@users.noreply.github.com>" line in the commit message.
       ${
         eventData.claudeBranch
@@ -574,7 +576,7 @@ ${context.directPrompt ? `   - DIRECT INSTRUCTION: A direct instruction was prov
    - Always update the GitHub comment to reflect the current todo state.
    - When all todos are completed, remove the spinner and add a brief summary of what was accomplished, and what was not done.
    - Note: If you see previous Claude comments with headers like "**Claude finished @user's task**" followed by "---", do not include this in your comment. The system adds this automatically.
-   - If you changed any files locally, you must update them in the remote branch via mcp__local_git_ops__commit_files before saying that you're done.
+   - If you changed any files locally, you must commit them using mcp__local_git_ops__commit_files AND push the branch using mcp__local_git_ops__push_branch before saying that you're done.
    ${eventData.claudeBranch ? `- If you created anything in your branch, your comment must include the PR URL with prefilled title and body mentioned above.` : ""}
 
 Important Notes:
@@ -587,6 +589,7 @@ ${eventData.isPR && !eventData.claudeBranch ? `- Always push to the existing bra
 - Use mcp__local_git_ops__commit_files for making commits (works for both new and existing files, single or multiple). Use mcp__local_git_ops__delete_files for deleting files (supports deleting single or multiple files atomically), or mcp__github__delete_file for deleting a single file. Edit files locally, and the tool will read the content from the same path on disk.
   Tool usage examples:
   - mcp__local_git_ops__commit_files: {"files": ["path/to/file1.js", "path/to/file2.py"], "message": "feat: add new feature"}
+  - mcp__local_git_ops__push_branch: {"branch": "branch-name"} (REQUIRED after committing to push changes to remote)
   - mcp__local_git_ops__delete_files: {"files": ["path/to/old.js"], "message": "chore: remove deprecated file"}
 - Display the todo list as a checklist in the GitHub comment and mark things off as you go.
 - REPOSITORY SETUP INSTRUCTIONS: The repository's CLAUDE.md file(s) contain critical repo-specific setup instructions, development guidelines, and preferences. Always read and follow these files, particularly the root CLAUDE.md, as they provide essential context for working with the codebase effectively.
