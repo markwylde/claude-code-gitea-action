@@ -42,6 +42,10 @@ async function run() {
     // Step 4: Check trigger conditions
     const containsTrigger = await checkTriggerAction(context);
 
+    // Set outputs that are always needed
+    core.setOutput("contains_trigger", containsTrigger.toString());
+    core.setOutput("GITHUB_TOKEN", githubToken);
+
     if (!containsTrigger) {
       console.log("No trigger found, skipping remaining steps");
       return;
@@ -52,6 +56,7 @@ async function run() {
 
     // Step 6: Create initial tracking comment
     const commentId = await createInitialComment(octokit.rest, context);
+    core.setOutput("claude_comment_id", commentId.toString());
 
     // Step 7: Fetch GitHub data (once for both branch setup and prompt creation)
     const githubData = await fetchGitHubData({
@@ -63,6 +68,10 @@ async function run() {
 
     // Step 8: Setup branch
     const branchInfo = await setupBranch(octokit, githubData, context);
+    core.setOutput("BASE_BRANCH", branchInfo.baseBranch);
+    if (branchInfo.claudeBranch) {
+      core.setOutput("CLAUDE_BRANCH", branchInfo.claudeBranch);
+    }
 
     // Step 9: Update initial comment with branch link (only for issues that created a new branch)
     if (branchInfo.claudeBranch) {
