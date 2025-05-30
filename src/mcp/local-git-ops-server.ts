@@ -56,6 +56,27 @@ function runGitCommand(command: string): string {
   }
 }
 
+// Helper function to ensure git user is configured
+function ensureGitUserConfigured(): void {
+  try {
+    // Check if user.email is already configured
+    runGitCommand("git config user.email");
+    console.log(`[LOCAL-GIT-MCP] Git user.email already configured`);
+  } catch (error) {
+    console.log(`[LOCAL-GIT-MCP] Git user.email not configured, setting default`);
+    runGitCommand('git config user.email "claude@anthropic.com"');
+  }
+
+  try {
+    // Check if user.name is already configured
+    runGitCommand("git config user.name");
+    console.log(`[LOCAL-GIT-MCP] Git user.name already configured`);
+  } catch (error) {
+    console.log(`[LOCAL-GIT-MCP] Git user.name not configured, setting default`);
+    runGitCommand('git config user.name "Claude"');
+  }
+}
+
 // Create branch tool
 server.tool(
   "create_branch",
@@ -115,6 +136,9 @@ server.tool(
   async ({ files, message }) => {
     console.log(`[LOCAL-GIT-MCP] commit_files called with files: ${JSON.stringify(files)}, message: ${message}`);
     try {
+      // Ensure git user is configured before committing
+      ensureGitUserConfigured();
+
       // Add the specified files
       console.log(`[LOCAL-GIT-MCP] Adding ${files.length} files to git...`);
       for (const file of files) {

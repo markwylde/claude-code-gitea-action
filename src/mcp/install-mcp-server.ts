@@ -18,17 +18,18 @@ export async function prepareMcpConfig(
     const mcpConfig = {
       mcpServers: {
         github: {
-          command: "docker",
+          command: "bun",
           args: [
             "run",
-            "-i",
-            "--rm",
-            "-e",
-            "GITHUB_PERSONAL_ACCESS_TOKEN",
-            "ghcr.io/anthropics/github-mcp-server:sha-7382253",
+            `${process.env.GITHUB_ACTION_PATH}/src/mcp/gitea-mcp-server.ts`,
           ],
           env: {
-            GITHUB_PERSONAL_ACCESS_TOKEN: githubToken,
+            GITHUB_TOKEN: githubToken,
+            REPO_OWNER: owner,
+            REPO_NAME: repo,
+            BRANCH_NAME: branch,
+            REPO_DIR: process.env.GITHUB_WORKSPACE || process.cwd(),
+            GITEA_API_URL: process.env.GITEA_API_URL || "https://api.github.com",
           },
         },
         local_git_ops: {
