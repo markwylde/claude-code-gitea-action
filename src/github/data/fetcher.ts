@@ -44,52 +44,154 @@ export async function fetchGitHubData({
     throw new Error("Invalid repository format. Expected 'owner/repo'.");
   }
 
+  // Check if we're in a Gitea environment (no GraphQL support)
+  const isGitea = process.env.GITHUB_API_URL && !process.env.GITHUB_API_URL.includes('api.github.com');
+
   let contextData: GitHubPullRequest | GitHubIssue | null = null;
   let comments: GitHubComment[] = [];
   let changedFiles: GitHubFile[] = [];
   let reviewData: { nodes: GitHubReview[] } | null = null;
 
   try {
-    if (isPR) {
-      // Fetch PR data with all comments and file information
-      const prResult = await octokits.graphql<PullRequestQueryResponse>(
-        PR_QUERY,
-        {
+    if (isGitea) {
+      // Use REST API for Gitea compatibility
+      if (isPR) {
+        console.log(`Fetching PR #${prNumber} data using REST API (Gitea mode)`);
+        const prResponse = await octokits.rest.pulls.get({
           owner,
           repo,
-          number: parseInt(prNumber),
-        },
-      );
+          pull_number: parseInt(prNumber),
+        });
 
-      if (prResult.repository.pullRequest) {
-        const pullRequest = prResult.repository.pullRequest;
-        contextData = pullRequest;
-        changedFiles = pullRequest.files.nodes || [];
-        comments = pullRequest.comments?.nodes || [];
-        reviewData = pullRequest.reviews || [];
+        contextData = {
+          title: prResponse.data.title,
+          body: prResponse.data.body || "",
+          author: { login: prResponse.data.user?.login || "" },
+          baseRefName: prResponse.data.base.ref,
+          headRefName: prResponse.data.head.ref,
+          headRefOid: prResponse.data.head.sha,
+          createdAt: prResponse.data.created_at,
+          additions: prResponse.data.additions || 0,
+          deletions: prResponse.data.deletions || 0,
+          state: prResponse.data.state.toUpperCase(),
+          commits: { totalCount: 0, nodes: [] },
+          files: { nodes: [] },
+          comments: { nodes: [] },
+          reviews: { nodes: [] },
+        };
 
-        console.log(`Successfully fetched PR #${prNumber} data`);
+        // Fetch comments separately
+        try {
+          const commentsResponse = await octokits.rest.issues.listComments({
+            owner,
+            repo,
+            issue_number: parseInt(prNumber),
+          });
+          comments = commentsResponse.data.map(comment => ({
+            id: comment.id.toString(),
+            databaseId: comment.id.toString(),
+            body: comment.body || "",
+            author: { login: comment.user?.login || "" },
+            createdAt: comment.created_at,
+          }));
+        } catch (error) {
+          console.warn("Failed to fetch PR comments:", error);
+        }
+
+        // Try to fetch files
+        try {
+          const filesResponse = await octokits.rest.pulls.listFiles({
+            owner,
+            repo,
+            pull_number: parseInt(prNumber),
+          });
+          changedFiles = filesResponse.data.map(file => ({
+            path: file.filename,
+            additions: file.additions,
+            deletions: file.deletions,
+            changeType: file.status,
+          }));
+        } catch (error) {
+          console.warn("Failed to fetch PR files:", error);
+        }
+
+        reviewData = { nodes: [] }; // Simplified for Gitea
       } else {
-        throw new Error(`PR #${prNumber} not found`);
+        console.log(`Fetching issue #${prNumber} data using REST API (Gitea mode)`);
+        const issueResponse = await octokits.rest.issues.get({
+          owner,
+          repo,
+          issue_number: parseInt(prNumber),
+        });
+
+        contextData = {
+          title: issueResponse.data.title,
+          body: issueResponse.data.body || "",
+          author: { login: issueResponse.data.user?.login || "" },
+          createdAt: issueResponse.data.created_at,
+          state: issueResponse.data.state.toUpperCase(),
+          comments: { nodes: [] },
+        };
+
+        // Fetch comments
+        try {
+          const commentsResponse = await octokits.rest.issues.listComments({
+            owner,
+            repo,
+            issue_number: parseInt(prNumber),
+          });
+          comments = commentsResponse.data.map(comment => ({
+            id: comment.id.toString(),
+            databaseId: comment.id.toString(),
+            body: comment.body || "",
+            author: { login: comment.user?.login || "" },
+            createdAt: comment.created_at,
+          }));
+        } catch (error) {
+          console.warn("Failed to fetch issue comments:", error);
+        }
       }
     } else {
-      // Fetch issue data
-      const issueResult = await octokits.graphql<IssueQueryResponse>(
-        ISSUE_QUERY,
-        {
-          owner,
-          repo,
-          number: parseInt(prNumber),
-        },
-      );
+      // Use GraphQL for GitHub
+      if (isPR) {
+        const prResult = await octokits.graphql<PullRequestQueryResponse>(
+          PR_QUERY,
+          {
+            owner,
+            repo,
+            number: parseInt(prNumber),
+          },
+        );
 
-      if (issueResult.repository.issue) {
-        contextData = issueResult.repository.issue;
-        comments = contextData?.comments?.nodes || [];
+        if (prResult.repository.pullRequest) {
+          const pullRequest = prResult.repository.pullRequest;
+          contextData = pullRequest;
+          changedFiles = pullRequest.files.nodes || [];
+          comments = pullRequest.comments?.nodes || [];
+          reviewData = pullRequest.reviews || [];
 
-        console.log(`Successfully fetched issue #${prNumber} data`);
+          console.log(`Successfully fetched PR #${prNumber} data`);
+        } else {
+          throw new Error(`PR #${prNumber} not found`);
+        }
       } else {
-        throw new Error(`Issue #${prNumber} not found`);
+        const issueResult = await octokits.graphql<IssueQueryResponse>(
+          ISSUE_QUERY,
+          {
+            owner,
+            repo,
+            number: parseInt(prNumber),
+          },
+        );
+
+        if (issueResult.repository.issue) {
+          contextData = issueResult.repository.issue;
+          comments = contextData?.comments?.nodes || [];
+
+          console.log(`Successfully fetched issue #${prNumber} data`);
+        } else {
+          throw new Error(`Issue #${prNumber} not found`);
+        }
       }
     }
   } catch (error) {

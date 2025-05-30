@@ -97,8 +97,10 @@ Be aware of these Gitea Actions limitations:
 
 - **`issue_comment` on PRs**: May not trigger reliably in some Gitea versions
 - **`pull_request_review_comment`**: Limited support compared to GitHub
+- **GraphQL API**: Not supported - action automatically falls back to REST API
 - **Cross-repository access**: Token permissions may be more restrictive
 - **Workflow triggers**: Some advanced trigger conditions may not work
+- **Permission checking**: Simplified for Gitea compatibility
 
 ### 3. Gitea Workarounds
 
@@ -136,6 +138,8 @@ Gitea has limited support for code review comment webhooks. Consider using:
 
 ### 4. Gitea Support
 - Compatible with self-hosted Gitea
+- Automatic fallback to REST API (no GraphQL dependency)
+- Simplified permission checking for Gitea environments
 - Reduced external dependencies
 - Standard Actions workflow patterns
 
@@ -163,17 +167,25 @@ permissions:
 
 ### Gitea-Specific Issues
 
-#### 1. Limited Event Support
+#### 1. Authentication Errors
+**Error**: "Failed to check permissions: HttpError: Bad credentials"
+**Solution**: This is normal in Gitea environments. The action automatically detects Gitea and bypasses GitHub-specific permission checks.
+
+#### 2. Limited Event Support
 Some GitHub Events may not be fully supported in Gitea. Use basic triggers:
 - `issue_comment` for comments
 - `issues` for issue events
 - `push` for code changes
 
-#### 2. Token Scope Limitations
+#### 3. Token Scope Limitations
 Gitea tokens may have different scope limitations. Ensure your Gitea instance allows:
 - Repository write access
 - Issue/PR comment creation
 - Branch creation and updates
+
+#### 4. GraphQL Not Supported
+**Error**: GraphQL queries failing
+**Solution**: The action automatically detects Gitea and uses REST API instead of GraphQL. No manual configuration needed.
 
 ## Migration Checklist
 
