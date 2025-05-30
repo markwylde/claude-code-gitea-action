@@ -1,6 +1,11 @@
 import type { GitHubClient } from "../api/client";
 import { GITEA_SERVER_URL } from "../api/config";
-import { branchHasChanges, fetchBranch, branchExists, remoteBranchExists } from "../utils/local-git";
+import {
+  branchHasChanges,
+  fetchBranch,
+  branchExists,
+  remoteBranchExists,
+} from "../utils/local-git";
 
 export async function checkAndDeleteEmptyBranch(
   client: GitHubClient,
@@ -15,8 +20,9 @@ export async function checkAndDeleteEmptyBranch(
   if (claudeBranch) {
     // Check if we're using Gitea or GitHub
     const giteaApiUrl = process.env.GITEA_API_URL?.trim();
-    const isGitea = giteaApiUrl && 
-      giteaApiUrl !== "" && 
+    const isGitea =
+      giteaApiUrl &&
+      giteaApiUrl !== "" &&
       !giteaApiUrl.includes("api.github.com") &&
       !giteaApiUrl.includes("github.com");
 
@@ -30,7 +36,10 @@ export async function checkAndDeleteEmptyBranch(
         await fetchBranch(baseBranch);
 
         // Check if branch exists and has changes
-        const { hasChanges, branchSha, baseSha } = await branchHasChanges(claudeBranch, baseBranch);
+        const { hasChanges, branchSha, baseSha } = await branchHasChanges(
+          claudeBranch,
+          baseBranch,
+        );
 
         if (branchSha && baseSha) {
           if (hasChanges) {
@@ -49,9 +58,11 @@ export async function checkAndDeleteEmptyBranch(
           // If we can't get SHAs, check if branch exists at all
           const localExists = await branchExists(claudeBranch);
           const remoteExists = await remoteBranchExists(claudeBranch);
-          
+
           if (localExists || remoteExists) {
-            console.log(`Branch ${claudeBranch} exists but SHA comparison failed, assuming it has commits`);
+            console.log(
+              `Branch ${claudeBranch} exists but SHA comparison failed, assuming it has commits`,
+            );
             const branchUrl = `${GITEA_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
             branchLink = `\n[View branch](${branchUrl})`;
           } else {
@@ -81,7 +92,11 @@ export async function checkAndDeleteEmptyBranch(
         );
 
         // Get base branch info for comparison
-        const baseResponse = await client.api.getBranch(owner, repo, baseBranch);
+        const baseResponse = await client.api.getBranch(
+          owner,
+          repo,
+          baseBranch,
+        );
 
         const branchSha = branchResponse.data.commit.sha;
         const baseSha = baseResponse.data.commit.sha;

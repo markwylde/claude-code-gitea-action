@@ -17,7 +17,7 @@ console.log(`[GITEA-MCP] REPO_OWNER: ${REPO_OWNER}`);
 console.log(`[GITEA-MCP] REPO_NAME: ${REPO_NAME}`);
 console.log(`[GITEA-MCP] BRANCH_NAME: ${BRANCH_NAME}`);
 console.log(`[GITEA-MCP] GITEA_API_URL: ${GITEA_API_URL}`);
-console.log(`[GITEA-MCP] GITHUB_TOKEN: ${GITHUB_TOKEN ? '***' : 'undefined'}`);
+console.log(`[GITEA-MCP] GITHUB_TOKEN: ${GITHUB_TOKEN ? "***" : "undefined"}`);
 
 if (!REPO_OWNER || !REPO_NAME || !GITHUB_TOKEN) {
   console.error(
@@ -39,10 +39,10 @@ async function giteaRequest(
 ): Promise<any> {
   const url = `${GITEA_API_URL}${endpoint}`;
   console.log(`[GITEA-MCP] Making ${method} request to: ${url}`);
-  
+
   const headers: Record<string, string> = {
-    "Authorization": `token ${GITHUB_TOKEN}`,
-    "Accept": "application/json",
+    Authorization: `token ${GITHUB_TOKEN}`,
+    Accept: "application/json",
   };
 
   if (body) {
@@ -60,7 +60,9 @@ async function giteaRequest(
   console.log(`[GITEA-MCP] Response: ${responseText.substring(0, 500)}...`);
 
   if (!response.ok) {
-    throw new Error(`Gitea API request failed: ${response.status} ${responseText}`);
+    throw new Error(
+      `Gitea API request failed: ${response.status} ${responseText}`,
+    );
   }
 
   return responseText ? JSON.parse(responseText) : null;
@@ -75,8 +77,10 @@ server.tool(
   },
   async ({ issue_number }) => {
     try {
-      const issue = await giteaRequest(`/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues/${issue_number}`);
-      
+      const issue = await giteaRequest(
+        `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues/${issue_number}`,
+      );
+
       return {
         content: [
           {
@@ -86,7 +90,8 @@ server.tool(
         ],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(`[GITEA-MCP] Error getting issue: ${errorMessage}`);
       return {
         content: [
@@ -108,23 +113,31 @@ server.tool(
   "Get all comments for a specific issue",
   {
     issue_number: z.number().describe("The issue number to fetch comments for"),
-    since: z.string().optional().describe("Only show comments updated after this time (ISO 8601 format)"),
-    before: z.string().optional().describe("Only show comments updated before this time (ISO 8601 format)"),
+    since: z
+      .string()
+      .optional()
+      .describe("Only show comments updated after this time (ISO 8601 format)"),
+    before: z
+      .string()
+      .optional()
+      .describe(
+        "Only show comments updated before this time (ISO 8601 format)",
+      ),
   },
   async ({ issue_number, since, before }) => {
     try {
       let endpoint = `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues/${issue_number}/comments`;
       const params = new URLSearchParams();
-      
+
       if (since) params.append("since", since);
       if (before) params.append("before", before);
-      
+
       if (params.toString()) {
         endpoint += `?${params.toString()}`;
       }
 
       const comments = await giteaRequest(endpoint);
-      
+
       return {
         content: [
           {
@@ -134,8 +147,11 @@ server.tool(
         ],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`[GITEA-MCP] Error getting issue comments: ${errorMessage}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(
+        `[GITEA-MCP] Error getting issue comments: ${errorMessage}`,
+      );
       return {
         content: [
           {
@@ -165,7 +181,7 @@ server.tool(
         "POST",
         { body },
       );
-      
+
       return {
         content: [
           {
@@ -175,7 +191,8 @@ server.tool(
         ],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(`[GITEA-MCP] Error adding issue comment: ${errorMessage}`);
       return {
         content: [
@@ -206,7 +223,7 @@ server.tool(
         "PATCH",
         { body },
       );
-      
+
       return {
         content: [
           {
@@ -216,8 +233,11 @@ server.tool(
         ],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`[GITEA-MCP] Error updating issue comment: ${errorMessage}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(
+        `[GITEA-MCP] Error updating issue comment: ${errorMessage}`,
+      );
       return {
         content: [
           {
@@ -245,7 +265,7 @@ server.tool(
         `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues/comments/${comment_id}`,
         "DELETE",
       );
-      
+
       return {
         content: [
           {
@@ -255,8 +275,11 @@ server.tool(
         ],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`[GITEA-MCP] Error deleting issue comment: ${errorMessage}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(
+        `[GITEA-MCP] Error deleting issue comment: ${errorMessage}`,
+      );
       return {
         content: [
           {
@@ -280,8 +303,10 @@ server.tool(
   },
   async ({ comment_id }) => {
     try {
-      const comment = await giteaRequest(`/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues/comments/${comment_id}`);
-      
+      const comment = await giteaRequest(
+        `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues/comments/${comment_id}`,
+      );
+
       return {
         content: [
           {
@@ -291,7 +316,8 @@ server.tool(
         ],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(`[GITEA-MCP] Error getting comment: ${errorMessage}`);
       return {
         content: [
@@ -312,20 +338,44 @@ server.tool(
   "list_issues",
   "List issues in the repository",
   {
-    state: z.enum(["open", "closed", "all"]).optional().describe("Issue state filter"),
-    labels: z.string().optional().describe("Comma-separated list of label names"),
+    state: z
+      .enum(["open", "closed", "all"])
+      .optional()
+      .describe("Issue state filter"),
+    labels: z
+      .string()
+      .optional()
+      .describe("Comma-separated list of label names"),
     milestone: z.string().optional().describe("Milestone title to filter by"),
-    assignee: z.string().optional().describe("Username to filter issues assigned to"),
-    creator: z.string().optional().describe("Username to filter issues created by"),
-    mentioned: z.string().optional().describe("Username to filter issues that mention"),
+    assignee: z
+      .string()
+      .optional()
+      .describe("Username to filter issues assigned to"),
+    creator: z
+      .string()
+      .optional()
+      .describe("Username to filter issues created by"),
+    mentioned: z
+      .string()
+      .optional()
+      .describe("Username to filter issues that mention"),
     page: z.number().optional().describe("Page number for pagination"),
     limit: z.number().optional().describe("Number of items per page"),
   },
-  async ({ state, labels, milestone, assignee, creator, mentioned, page, limit }) => {
+  async ({
+    state,
+    labels,
+    milestone,
+    assignee,
+    creator,
+    mentioned,
+    page,
+    limit,
+  }) => {
     try {
       let endpoint = `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues`;
       const params = new URLSearchParams();
-      
+
       if (state) params.append("state", state);
       if (labels) params.append("labels", labels);
       if (milestone) params.append("milestone", milestone);
@@ -334,13 +384,13 @@ server.tool(
       if (mentioned) params.append("mentioned", mentioned);
       if (page) params.append("page", page.toString());
       if (limit) params.append("limit", limit.toString());
-      
+
       if (params.toString()) {
         endpoint += `?${params.toString()}`;
       }
 
       const issues = await giteaRequest(endpoint);
-      
+
       return {
         content: [
           {
@@ -350,7 +400,8 @@ server.tool(
         ],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(`[GITEA-MCP] Error listing issues: ${errorMessage}`);
       return {
         content: [
@@ -374,14 +425,23 @@ server.tool(
     title: z.string().describe("Issue title"),
     body: z.string().optional().describe("Issue body content"),
     assignee: z.string().optional().describe("Username to assign the issue to"),
-    assignees: z.array(z.string()).optional().describe("Array of usernames to assign the issue to"),
-    milestone: z.number().optional().describe("Milestone ID to associate with the issue"),
-    labels: z.array(z.string()).optional().describe("Array of label names to apply to the issue"),
+    assignees: z
+      .array(z.string())
+      .optional()
+      .describe("Array of usernames to assign the issue to"),
+    milestone: z
+      .number()
+      .optional()
+      .describe("Milestone ID to associate with the issue"),
+    labels: z
+      .array(z.string())
+      .optional()
+      .describe("Array of label names to apply to the issue"),
   },
   async ({ title, body, assignee, assignees, milestone, labels }) => {
     try {
       const issueData: any = { title };
-      
+
       if (body) issueData.body = body;
       if (assignee) issueData.assignee = assignee;
       if (assignees) issueData.assignees = assignees;
@@ -393,7 +453,7 @@ server.tool(
         "POST",
         issueData,
       );
-      
+
       return {
         content: [
           {
@@ -403,7 +463,8 @@ server.tool(
         ],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(`[GITEA-MCP] Error creating issue: ${errorMessage}`);
       return {
         content: [
@@ -428,15 +489,33 @@ server.tool(
     title: z.string().optional().describe("New issue title"),
     body: z.string().optional().describe("New issue body content"),
     assignee: z.string().optional().describe("Username to assign the issue to"),
-    assignees: z.array(z.string()).optional().describe("Array of usernames to assign the issue to"),
-    milestone: z.number().optional().describe("Milestone ID to associate with the issue"),
-    labels: z.array(z.string()).optional().describe("Array of label names to apply to the issue"),
+    assignees: z
+      .array(z.string())
+      .optional()
+      .describe("Array of usernames to assign the issue to"),
+    milestone: z
+      .number()
+      .optional()
+      .describe("Milestone ID to associate with the issue"),
+    labels: z
+      .array(z.string())
+      .optional()
+      .describe("Array of label names to apply to the issue"),
     state: z.enum(["open", "closed"]).optional().describe("Issue state"),
   },
-  async ({ issue_number, title, body, assignee, assignees, milestone, labels, state }) => {
+  async ({
+    issue_number,
+    title,
+    body,
+    assignee,
+    assignees,
+    milestone,
+    labels,
+    state,
+  }) => {
     try {
       const updateData: any = {};
-      
+
       if (title) updateData.title = title;
       if (body !== undefined) updateData.body = body;
       if (assignee) updateData.assignee = assignee;
@@ -450,7 +529,7 @@ server.tool(
         "PATCH",
         updateData,
       );
-      
+
       return {
         content: [
           {
@@ -460,7 +539,8 @@ server.tool(
         ],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(`[GITEA-MCP] Error updating issue: ${errorMessage}`);
       return {
         content: [
@@ -477,45 +557,43 @@ server.tool(
 );
 
 // Get repository information
-server.tool(
-  "get_repository",
-  "Get repository information",
-  {},
-  async () => {
-    try {
-      const repo = await giteaRequest(`/api/v1/repos/${REPO_OWNER}/${REPO_NAME}`);
-      
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(repo, null, 2),
-          },
-        ],
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`[GITEA-MCP] Error getting repository: ${errorMessage}`);
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Error getting repository: ${errorMessage}`,
-          },
-        ],
-        error: errorMessage,
-        isError: true,
-      };
-    }
-  },
-);
+server.tool("get_repository", "Get repository information", {}, async () => {
+  try {
+    const repo = await giteaRequest(`/api/v1/repos/${REPO_OWNER}/${REPO_NAME}`);
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(repo, null, 2),
+        },
+      ],
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`[GITEA-MCP] Error getting repository: ${errorMessage}`);
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error getting repository: ${errorMessage}`,
+        },
+      ],
+      error: errorMessage,
+      isError: true,
+    };
+  }
+});
 
 // Get pull requests
 server.tool(
   "list_pull_requests",
   "List pull requests in the repository",
   {
-    state: z.enum(["open", "closed", "all"]).optional().describe("Pull request state filter"),
+    state: z
+      .enum(["open", "closed", "all"])
+      .optional()
+      .describe("Pull request state filter"),
     head: z.string().optional().describe("Head branch name"),
     base: z.string().optional().describe("Base branch name"),
     page: z.number().optional().describe("Page number for pagination"),
@@ -525,19 +603,19 @@ server.tool(
     try {
       let endpoint = `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/pulls`;
       const params = new URLSearchParams();
-      
+
       if (state) params.append("state", state);
       if (head) params.append("head", head);
       if (base) params.append("base", base);
       if (page) params.append("page", page.toString());
       if (limit) params.append("limit", limit.toString());
-      
+
       if (params.toString()) {
         endpoint += `?${params.toString()}`;
       }
 
       const pulls = await giteaRequest(endpoint);
-      
+
       return {
         content: [
           {
@@ -547,7 +625,8 @@ server.tool(
         ],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(`[GITEA-MCP] Error listing pull requests: ${errorMessage}`);
       return {
         content: [
@@ -572,8 +651,10 @@ server.tool(
   },
   async ({ pull_number }) => {
     try {
-      const pull = await giteaRequest(`/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/pulls/${pull_number}`);
-      
+      const pull = await giteaRequest(
+        `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/pulls/${pull_number}`,
+      );
+
       return {
         content: [
           {
@@ -583,7 +664,8 @@ server.tool(
         ],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(`[GITEA-MCP] Error getting pull request: ${errorMessage}`);
       return {
         content: [
@@ -608,15 +690,36 @@ server.tool(
     body: z.string().optional().describe("Pull request body/description"),
     head: z.string().describe("Head branch name"),
     base: z.string().describe("Base branch name"),
-    assignee: z.string().optional().describe("Username to assign the pull request to"),
-    assignees: z.array(z.string()).optional().describe("Array of usernames to assign the pull request to"),
-    milestone: z.number().optional().describe("Milestone ID to associate with the pull request"),
-    labels: z.array(z.string()).optional().describe("Array of label names to apply to the pull request"),
+    assignee: z
+      .string()
+      .optional()
+      .describe("Username to assign the pull request to"),
+    assignees: z
+      .array(z.string())
+      .optional()
+      .describe("Array of usernames to assign the pull request to"),
+    milestone: z
+      .number()
+      .optional()
+      .describe("Milestone ID to associate with the pull request"),
+    labels: z
+      .array(z.string())
+      .optional()
+      .describe("Array of label names to apply to the pull request"),
   },
-  async ({ title, body, head, base, assignee, assignees, milestone, labels }) => {
+  async ({
+    title,
+    body,
+    head,
+    base,
+    assignee,
+    assignees,
+    milestone,
+    labels,
+  }) => {
     try {
       const pullData: any = { title, head, base };
-      
+
       if (body) pullData.body = body;
       if (assignee) pullData.assignee = assignee;
       if (assignees) pullData.assignees = assignees;
@@ -628,7 +731,7 @@ server.tool(
         "POST",
         pullData,
       );
-      
+
       return {
         content: [
           {
@@ -638,7 +741,8 @@ server.tool(
         ],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(`[GITEA-MCP] Error creating pull request: ${errorMessage}`);
       return {
         content: [

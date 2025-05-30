@@ -536,13 +536,13 @@ ${context.directPrompt ? `   - DIRECT INSTRUCTION: A direct instruction was prov
       - Commit changes using mcp__local_git_ops__commit_files to the existing branch (works for both new and existing files).
       - Use mcp__local_git_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
       - CRITICAL: After committing, you MUST push the branch to the remote repository using mcp__local_git_ops__push_branch
-      - When pushing changes with this tool and TRIGGER_USERNAME is not "Unknown", include a "Co-authored-by: ${context.triggerUsername} <${context.triggerUsername}@users.noreply.github.com>" line in the commit message.`
+      - When pushing changes with this tool and TRIGGER_USERNAME is not "Unknown", include a "Co-authored-by: ${context.triggerUsername} <${context.triggerUsername}@users.noreply.local>" line in the commit message.`
           : `
       - You are already on the correct branch (${eventData.claudeBranch || "the PR branch"}). Do not create a new branch.
       - Commit changes using mcp__local_git_ops__commit_files (works for both new and existing files)
       - Use mcp__local_git_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
       - CRITICAL: After committing, you MUST push the branch to the remote repository using mcp__local_git_ops__push_branch
-      - When pushing changes and TRIGGER_USERNAME is not "Unknown", include a "Co-authored-by: ${context.triggerUsername} <${context.triggerUsername}@users.noreply.github.com>" line in the commit message.
+      - When pushing changes and TRIGGER_USERNAME is not "Unknown", include a "Co-authored-by: ${context.triggerUsername} <${context.triggerUsername}@users.noreply.local>" line in the commit message.
       ${
         eventData.claudeBranch
           ? `- Provide a URL to create a PR manually in this format:
@@ -584,7 +584,7 @@ Important Notes:
 - Never create new comments. Only update the existing comment using ${eventData.eventName === "pull_request_review_comment" ? "mcp__github__update_pull_request_comment" : "mcp__github__update_issue_comment"} with comment_id: ${context.claudeCommentId}.
 - This includes ALL responses: code reviews, answers to questions, progress updates, and final results.${eventData.isPR ? "\n- PR CRITICAL: After reading files and forming your response, you MUST post it by calling mcp__github__update_issue_comment. Do NOT just respond with a normal response, the user will not see it." : ""}
 - You communicate exclusively by editing your single comment - not through any other means.
-- Use this spinner HTML when work is in progress: <img src="https://github.com/user-attachments/assets/5ac382c7-e004-429b-8e35-7feb3e8f9c6f" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />
+- Use this spinner HTML when work is in progress: <img src="data:image/gif;base64,R0lGODlhEAAQAPIAAP///wAAAMLCwkJCQgAAAGJiYoKCgpKSkiH/C05FVFNDQVBFMi4wAwEAAAAh/hpDcmVhdGVkIHdpdGggYWpheGxvYWQuaW5mbwAh+QQJCgAAACwAAAAAEAAQAAADMwi63P4wyklrE2MIOggZnAdOmGYJRbExwroUmcG2LmDEwnHQLVsYOd2mBzkYDAdKa+dIAAAh+QQJCgAAACwAAAAAEAAQAAADNAi63P5OjCEgG4QMu7DmikRxQlFUYDEZIGBMRVsaqHwctXXf7WEYB4Ag1xjihkMZsiUkKhIAIfkECQoAAAAsAAAAABAAEAAAAzYIujIjK8pByJDMlFYvBoVjHA70GU7xSUJhmKtwHPAKzLO9HMaoKwJZ7Rf8AYPDDzKpZBqfvwQAIfkECQoAAAAsAAAAABAAEAAAAzMIumIlK8oyhpHsnFZfhYumCYUhDAQxRIdhHBGqRoKw0R8DYlJd8z0fMDgsGo/IpHI5TAAAIfkECQoAAAAsAAAAABAAEAAAAzIIunInK0rnZBTwGPNMgQwmdsNgXGJUlIWEuR5oWUIpz8pAEAMe6TwfwyYsGo/IpFKSAAAh+QQJCgAAACwAAAAAEAAQAAADMwi6IMKQORfjdOe82p4wGccc4CEuQradylesojEMBgsUc2G7sDX3lQGBMLAJibufbSlKAAAh+QQJCgAAACwAAAAAEAAQAAADMgi63P7wjRLKLkHZx6EaNgeFJBAC7F9YoI5FqYZEtfkGdVBNMAKg3DiC0Kx/BqFgBAA7" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />
 ${eventData.isPR && !eventData.claudeBranch ? `- Always push to the existing branch when triggered on a PR.` : `- IMPORTANT: You are already on the correct branch (${eventData.claudeBranch || "the created branch"}). Never create new branches when triggered on issues or closed/merged PRs.`}
 - Use mcp__local_git_ops__commit_files for making commits (works for both new and existing files, single or multiple). Use mcp__local_git_ops__delete_files for deleting files (supports deleting single or multiple files atomically), or mcp__github__delete_file for deleting a single file. Edit files locally, and the tool will read the content from the same path on disk.
   Tool usage examples:
@@ -621,7 +621,7 @@ What You CANNOT Do:
 - View CI/CD results or workflow run outputs (cannot access GitHub Actions logs or test results)
 
 When users ask you to perform actions you cannot do, politely explain the limitation and, when applicable, direct them to the FAQ for more information and workarounds:
-"I'm unable to [specific action] due to [reason]. You can find more information and potential workarounds in the [FAQ](https://github.com/anthropics/claude-code-action/blob/main/FAQ.md)."
+"I'm unable to [specific action] due to [reason]. Please check the documentation for more information and potential workarounds."
 
 If a user asks for something outside these capabilities (and you have no other tools provided), politely explain that you cannot perform that action and suggest an alternative approach if possible.
 

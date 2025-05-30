@@ -12,7 +12,12 @@ import {
 } from "../github/context";
 import { GITEA_SERVER_URL } from "../github/api/config";
 import { checkAndDeleteEmptyBranch } from "../github/operations/branch-cleanup";
-import { branchHasChanges, fetchBranch, branchExists, remoteBranchExists } from "../github/utils/local-git";
+import {
+  branchHasChanges,
+  fetchBranch,
+  branchExists,
+  remoteBranchExists,
+} from "../github/utils/local-git";
 
 async function run() {
   try {
@@ -108,14 +113,17 @@ async function run() {
       if (!containsPRUrl) {
         // Check if we're using Gitea or GitHub
         const giteaApiUrl = process.env.GITEA_API_URL?.trim();
-        const isGitea = giteaApiUrl && 
-          giteaApiUrl !== "" && 
+        const isGitea =
+          giteaApiUrl &&
+          giteaApiUrl !== "" &&
           !giteaApiUrl.includes("api.github.com") &&
           !giteaApiUrl.includes("github.com");
 
         if (isGitea) {
           // Use local git commands for Gitea
-          console.log("Using local git commands for PR link check (Gitea mode)");
+          console.log(
+            "Using local git commands for PR link check (Gitea mode)",
+          );
 
           try {
             // Fetch latest changes from remote
@@ -123,7 +131,10 @@ async function run() {
             await fetchBranch(baseBranch);
 
             // Check if branch exists and has changes
-            const { hasChanges, branchSha, baseSha } = await branchHasChanges(claudeBranch, baseBranch);
+            const { hasChanges, branchSha, baseSha } = await branchHasChanges(
+              claudeBranch,
+              baseBranch,
+            );
 
             if (branchSha && baseSha) {
               if (hasChanges) {
@@ -148,9 +159,11 @@ async function run() {
               // If we can't get SHAs, check if branch exists at all
               const localExists = await branchExists(claudeBranch);
               const remoteExists = await remoteBranchExists(claudeBranch);
-              
+
               if (localExists || remoteExists) {
-                console.log(`Branch ${claudeBranch} exists but SHA comparison failed, adding PR link to be safe`);
+                console.log(
+                  `Branch ${claudeBranch} exists but SHA comparison failed, adding PR link to be safe`,
+                );
                 const entityType = context.isPR ? "PR" : "Issue";
                 const prTitle = encodeURIComponent(
                   `${entityType} #${context.entityNumber}: Changes from Claude`,

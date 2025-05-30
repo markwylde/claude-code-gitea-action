@@ -21,7 +21,9 @@ console.log(`[LOCAL-GIT-MCP] REPO_NAME: ${REPO_NAME}`);
 console.log(`[LOCAL-GIT-MCP] BRANCH_NAME: ${BRANCH_NAME}`);
 console.log(`[LOCAL-GIT-MCP] REPO_DIR: ${REPO_DIR}`);
 console.log(`[LOCAL-GIT-MCP] GITEA_API_URL: ${GITEA_API_URL}`);
-console.log(`[LOCAL-GIT-MCP] GITHUB_TOKEN: ${GITHUB_TOKEN ? '***' : 'undefined'}`);
+console.log(
+  `[LOCAL-GIT-MCP] GITHUB_TOKEN: ${GITHUB_TOKEN ? "***" : "undefined"}`,
+);
 
 if (!REPO_OWNER || !REPO_NAME || !BRANCH_NAME) {
   console.error(
@@ -63,7 +65,9 @@ function ensureGitUserConfigured(): void {
     runGitCommand("git config user.email");
     console.log(`[LOCAL-GIT-MCP] Git user.email already configured`);
   } catch (error) {
-    console.log(`[LOCAL-GIT-MCP] Git user.email not configured, setting default`);
+    console.log(
+      `[LOCAL-GIT-MCP] Git user.email not configured, setting default`,
+    );
     runGitCommand('git config user.email "claude@anthropic.com"');
   }
 
@@ -72,7 +76,9 @@ function ensureGitUserConfigured(): void {
     runGitCommand("git config user.name");
     console.log(`[LOCAL-GIT-MCP] Git user.name already configured`);
   } catch (error) {
-    console.log(`[LOCAL-GIT-MCP] Git user.name not configured, setting default`);
+    console.log(
+      `[LOCAL-GIT-MCP] Git user.name not configured, setting default`,
+    );
     runGitCommand('git config user.name "Claude"');
   }
 }
@@ -134,7 +140,9 @@ server.tool(
     message: z.string().describe("Commit message"),
   },
   async ({ files, message }) => {
-    console.log(`[LOCAL-GIT-MCP] commit_files called with files: ${JSON.stringify(files)}, message: ${message}`);
+    console.log(
+      `[LOCAL-GIT-MCP] commit_files called with files: ${JSON.stringify(files)}, message: ${message}`,
+    );
     try {
       // Ensure git user is configured before committing
       ensureGitUserConfigured();
@@ -151,7 +159,9 @@ server.tool(
       console.log(`[LOCAL-GIT-MCP] Committing with message: ${message}`);
       runGitCommand(`git commit -m "${message}"`);
 
-      console.log(`[LOCAL-GIT-MCP] Successfully committed ${files.length} files`);
+      console.log(
+        `[LOCAL-GIT-MCP] Successfully committed ${files.length} files`,
+      );
       return {
         content: [
           {
@@ -353,7 +363,9 @@ server.tool("git_status", "Get the current git status", {}, async () => {
     const currentBranch = runGitCommand("git rev-parse --abbrev-ref HEAD");
 
     console.log(`[LOCAL-GIT-MCP] Current branch: ${currentBranch}`);
-    console.log(`[LOCAL-GIT-MCP] Git status: ${status || "Working tree clean"}`);
+    console.log(
+      `[LOCAL-GIT-MCP] Git status: ${status || "Working tree clean"}`,
+    );
 
     return {
       content: [
