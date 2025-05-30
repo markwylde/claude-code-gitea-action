@@ -122,7 +122,7 @@ export async function setupBranch(
 
       // Verify the branch was created
       const currentBranch = await $`git branch --show-current`;
-      const branchName = currentBranch.toString().trim();
+      const branchName = currentBranch.text().trim();
       console.log(`Current branch after creation: ${branchName}`);
 
       if (branchName === newBranch) {
