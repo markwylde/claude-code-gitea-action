@@ -113,18 +113,33 @@ export async function setupBranch(
         repo,
         branch: sourceBranch,
       });
-      currentSHA = branchResponse.data.commit.sha;
+      // Gitea uses commit.id instead of commit.sha
+      currentSHA = branchResponse.data.commit.sha || branchResponse.data.commit.id;
     }
 
     console.log(`Current SHA: ${currentSHA}`);
 
-    // Create branch using GitHub API
-    await octokits.rest.git.createRef({
-      owner,
-      repo,
-      ref: `refs/heads/${newBranch}`,
-      sha: currentSHA,
-    });
+    // Create branch - try GitHub API first, fallback to Gitea API
+    try {
+      await octokits.rest.git.createRef({
+        owner,
+        repo,
+        ref: `refs/heads/${newBranch}`,
+        sha: currentSHA,
+      });
+    } catch (createRefError: any) {
+      // If git/refs creation fails (like in Gitea), use the branches endpoint
+      console.log(`git createRef failed, trying branches endpoint: ${createRefError.message}`);
+      
+      // Use Gitea's branch creation endpoint
+      const response = await octokits.request('POST /repos/{owner}/{repo}/branches', {
+        owner,
+        repo,
+        new_branch_name: newBranch,
+        old_branch_name: sourceBranch,
+      });
+      console.log(`Created branch via branches endpoint: ${response.status}`);
+    }
 
     // Checkout the new branch (shallow fetch for performance)
     await $`git fetch origin --depth=1 ${newBranch}`;
