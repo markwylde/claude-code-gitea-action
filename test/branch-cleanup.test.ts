@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { checkAndDeleteEmptyBranch } from "../src/github/operations/branch-cleanup";
 import type { Octokits } from "../src/github/api/client";
-import { GITHUB_SERVER_URL } from "../src/github/api/config";
+import { GITEA_SERVER_URL } from "../src/github/api/config";
 
 describe("checkAndDeleteEmptyBranch", () => {
   let consoleLogSpy: any;
@@ -88,7 +88,7 @@ describe("checkAndDeleteEmptyBranch", () => {
 
     expect(result.shouldDeleteBranch).toBe(false);
     expect(result.branchLink).toBe(
-      `\n[View branch](${GITHUB_SERVER_URL}/owner/repo/tree/claude/issue-123-20240101_123456)`,
+      `\n[View branch](${GITEA_SERVER_URL}/owner/repo/src/branch/claude/issue-123-20240101_123456)`,
     );
     expect(consoleLogSpy).not.toHaveBeenCalledWith(
       expect.stringContaining("has no commits"),
@@ -119,7 +119,7 @@ describe("checkAndDeleteEmptyBranch", () => {
 
     expect(result.shouldDeleteBranch).toBe(false);
     expect(result.branchLink).toBe(
-      `\n[View branch](${GITHUB_SERVER_URL}/owner/repo/tree/claude/issue-123-20240101_123456)`,
+      `\n[View branch](${GITEA_SERVER_URL}/owner/repo/src/branch/claude/issue-123-20240101_123456)`,
     );
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       "Error checking for commits on Claude branch:",

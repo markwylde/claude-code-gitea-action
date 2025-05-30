@@ -10,7 +10,7 @@ import { $ } from "bun";
 import * as core from "@actions/core";
 import type { ParsedGitHubContext } from "../context";
 import type { GitHubPullRequest } from "../types";
-import type { Octokits } from "../api/client";
+import type { GitHubClient } from "../api/client";
 import type { FetchDataResult } from "../data/fetcher";
 
 export type BranchInfo = {
@@ -20,7 +20,7 @@ export type BranchInfo = {
 };
 
 export async function setupBranch(
-  octokits: Octokits,
+  client: GitHubClient,
   githubData: FetchDataResult,
   context: ParsedGitHubContext,
 ): Promise<BranchInfo> {
@@ -70,10 +70,7 @@ export async function setupBranch(
     sourceBranch = baseBranch;
   } else {
     // No base branch provided, fetch the default branch to use as source
-    const repoResponse = await octokits.rest.repos.get({
-      owner,
-      repo,
-    });
+    const repoResponse = await client.api.getRepo(owner, repo);
     sourceBranch = repoResponse.data.default_branch;
   }
 
@@ -93,32 +90,61 @@ export async function setupBranch(
   const newBranch = `claude/${entityType}-${entityNumber}-${timestamp}`;
 
   try {
-    // Get the SHA of the source branch
-    const sourceBranchRef = await octokits.rest.git.getRef({
-      owner,
-      repo,
-      ref: `heads/${sourceBranch}`,
-    });
-
-    const currentSHA = sourceBranchRef.data.object.sha;
-
-    console.log(`Current SHA: ${currentSHA}`);
-
-    // Create branch using GitHub API
-    await octokits.rest.git.createRef({
-      owner,
-      repo,
-      ref: `refs/heads/${newBranch}`,
-      sha: currentSHA,
-    });
-
-    // Checkout the new branch (shallow fetch for performance)
-    await $`git fetch origin --depth=1 ${newBranch}`;
-    await $`git checkout ${newBranch}`;
-
+    // Use local git operations instead of API since Gitea's API is unreliable
     console.log(
-      `Successfully created and checked out new branch: ${newBranch}`,
+      `Setting up local git branch: ${newBranch} from: ${sourceBranch}`,
     );
+
+    // Ensure we're in the repository directory
+    const repoDir = process.env.GITHUB_WORKSPACE || process.cwd();
+    console.log(`Working in directory: ${repoDir}`);
+
+    try {
+      // Check if we're in a git repository
+      console.log(`Checking if we're in a git repository...`);
+      await $`git status`;
+
+      // Ensure we have the latest version of the source branch
+      console.log(`Fetching latest ${sourceBranch}...`);
+      await $`git fetch origin ${sourceBranch}`;
+
+      // Checkout the source branch
+      console.log(`Checking out ${sourceBranch}...`);
+      await $`git checkout ${sourceBranch}`;
+
+      // Pull latest changes
+      console.log(`Pulling latest changes for ${sourceBranch}...`);
+      await $`git pull origin ${sourceBranch}`;
+
+      // Create and checkout the new branch
+      console.log(`Creating new branch: ${newBranch}`);
+      await $`git checkout -b ${newBranch}`;
+
+      // Verify the branch was created
+      const currentBranch = await $`git branch --show-current`;
+      const branchName = currentBranch.text().trim();
+      console.log(`Current branch after creation: ${branchName}`);
+
+      if (branchName === newBranch) {
+        console.log(
+          `✅ Successfully created and checked out branch: ${newBranch}`,
+        );
+      } else {
+        throw new Error(
+          `Branch creation failed. Expected ${newBranch}, got ${branchName}`,
+        );
+      }
+    } catch (gitError: any) {
+      console.error(`❌ Git operations failed:`, gitError);
+      console.error(`Error message: ${gitError.message || gitError}`);
+
+      // This is a critical failure - the branch MUST be created for Claude to work
+      throw new Error(
+        `Failed to create branch ${newBranch}: ${gitError.message || gitError}`,
+      );
+    }
+
+    console.log(`Branch setup completed for: ${newBranch}`);
 
     // Set outputs for GitHub Actions
     core.setOutput("CLAUDE_BRANCH", newBranch);
@@ -129,7 +155,7 @@ export async function setupBranch(
       currentBranch: newBranch,
     };
   } catch (error) {
-    console.error("Error creating branch:", error);
+    console.error("Error setting up branch:", error);
     process.exit(1);
   }
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { createOctokit } from "../github/api/client";
+import { createClient } from "../github/api/client";
 import * as fs from "fs/promises";
 import {
   updateCommentBody,
@@ -10,8 +10,14 @@ import {
   parseGitHubContext,
   isPullRequestReviewCommentEvent,
 } from "../github/context";
-import { GITHUB_SERVER_URL } from "../github/api/config";
+import { GITEA_SERVER_URL } from "../github/api/config";
 import { checkAndDeleteEmptyBranch } from "../github/operations/branch-cleanup";
+import {
+  branchHasChanges,
+  fetchBranch,
+  branchExists,
+  remoteBranchExists,
+} from "../github/utils/local-git";
 
 async function run() {
   try {
@@ -23,9 +29,9 @@ async function run() {
 
     const context = parseGitHubContext();
     const { owner, repo } = context.repository;
-    const octokit = createOctokit(githubToken);
+    const client = createClient(githubToken);
 
-    const serverUrl = GITHUB_SERVER_URL;
+    const serverUrl = GITEA_SERVER_URL;
     const jobUrl = `${serverUrl}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`;
 
     let comment;
@@ -37,12 +43,11 @@ async function run() {
       if (isPullRequestReviewCommentEvent(context)) {
         // For PR review comments, use the pulls API
         console.log(`Fetching PR review comment ${commentId}`);
-        const { data: prComment } = await octokit.rest.pulls.getReviewComment({
-          owner,
-          repo,
-          comment_id: commentId,
-        });
-        comment = prComment;
+        const response = await client.api.customRequest(
+          "GET",
+          `/api/v1/repos/${owner}/${repo}/pulls/comments/${commentId}`,
+        );
+        comment = response.data;
         isPRReviewComment = true;
         console.log("Successfully fetched as PR review comment");
       }
@@ -50,12 +55,11 @@ async function run() {
       // For all other event types, use the issues API
       if (!comment) {
         console.log(`Fetching issue comment ${commentId}`);
-        const { data: issueComment } = await octokit.rest.issues.getComment({
-          owner,
-          repo,
-          comment_id: commentId,
-        });
-        comment = issueComment;
+        const response = await client.api.customRequest(
+          "GET",
+          `/api/v1/repos/${owner}/${repo}/issues/comments/${commentId}`,
+        );
+        comment = response.data;
         isPRReviewComment = false;
         console.log("Successfully fetched as issue comment");
       }
@@ -69,14 +73,14 @@ async function run() {
 
       // Try to get the PR info to understand the comment structure
       try {
-        const { data: pr } = await octokit.rest.pulls.get({
+        const pr = await client.api.getPullRequest(
           owner,
           repo,
-          pull_number: context.entityNumber,
-        });
-        console.log(`PR state: ${pr.state}`);
-        console.log(`PR comments count: ${pr.comments}`);
-        console.log(`PR review comments count: ${pr.review_comments}`);
+          context.entityNumber,
+        );
+        console.log(`PR state: ${pr.data.state}`);
+        console.log(`PR comments count: ${pr.data.comments}`);
+        console.log(`PR review comments count: ${pr.data.review_comments}`);
       } catch {
         console.error("Could not fetch PR info for debugging");
       }
@@ -88,7 +92,7 @@ async function run() {
 
     // Check if we need to add branch link for new branches
     const { shouldDeleteBranch, branchLink } = await checkAndDeleteEmptyBranch(
-      octokit,
+      client,
       owner,
       repo,
       claudeBranch,
@@ -107,20 +111,79 @@ async function run() {
       const containsPRUrl = currentBody.match(prUrlPattern);
 
       if (!containsPRUrl) {
-        // Check if there are changes to the branch compared to the default branch
-        try {
-          const { data: comparison } =
-            await octokit.rest.repos.compareCommitsWithBasehead({
-              owner,
-              repo,
-              basehead: `${baseBranch}...${claudeBranch}`,
-            });
+        // Check if we're using Gitea or GitHub
+        const giteaApiUrl = process.env.GITEA_API_URL?.trim();
+        const isGitea =
+          giteaApiUrl &&
+          giteaApiUrl !== "" &&
+          !giteaApiUrl.includes("api.github.com") &&
+          !giteaApiUrl.includes("github.com");
 
-          // If there are changes (commits or file changes), add the PR URL
-          if (
-            comparison.total_commits > 0 ||
-            (comparison.files && comparison.files.length > 0)
-          ) {
+        if (isGitea) {
+          // Use local git commands for Gitea
+          console.log(
+            "Using local git commands for PR link check (Gitea mode)",
+          );
+
+          try {
+            // Fetch latest changes from remote
+            await fetchBranch(claudeBranch);
+            await fetchBranch(baseBranch);
+
+            // Check if branch exists and has changes
+            const { hasChanges, branchSha, baseSha } = await branchHasChanges(
+              claudeBranch,
+              baseBranch,
+            );
+
+            if (branchSha && baseSha) {
+              if (hasChanges) {
+                console.log(
+                  `Branch ${claudeBranch} appears to have changes (different SHA from base)`,
+                );
+                const entityType = context.isPR ? "PR" : "Issue";
+                const prTitle = encodeURIComponent(
+                  `${entityType} #${context.entityNumber}: Changes from Claude`,
+                );
+                const prBody = encodeURIComponent(
+                  `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
+                );
+                const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
+                prLink = `\n[Create a PR](${prUrl})`;
+              } else {
+                console.log(
+                  `Branch ${claudeBranch} has same SHA as base, no PR link needed`,
+                );
+              }
+            } else {
+              // If we can't get SHAs, check if branch exists at all
+              const localExists = await branchExists(claudeBranch);
+              const remoteExists = await remoteBranchExists(claudeBranch);
+
+              if (localExists || remoteExists) {
+                console.log(
+                  `Branch ${claudeBranch} exists but SHA comparison failed, adding PR link to be safe`,
+                );
+                const entityType = context.isPR ? "PR" : "Issue";
+                const prTitle = encodeURIComponent(
+                  `${entityType} #${context.entityNumber}: Changes from Claude`,
+                );
+                const prBody = encodeURIComponent(
+                  `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
+                );
+                const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
+                prLink = `\n[Create a PR](${prUrl})`;
+              } else {
+                console.log(
+                  `Branch ${claudeBranch} does not exist yet - no PR link needed`,
+                );
+                prLink = "";
+              }
+            }
+          } catch (error: any) {
+            console.error("Error checking branch with git commands:", error);
+            // For errors, add PR link to be safe
+            console.log("Adding PR link as fallback due to git command error");
             const entityType = context.isPR ? "PR" : "Issue";
             const prTitle = encodeURIComponent(
               `${entityType} #${context.entityNumber}: Changes from Claude`,
@@ -131,9 +194,71 @@ async function run() {
             const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
             prLink = `\n[Create a PR](${prUrl})`;
           }
-        } catch (error) {
-          console.error("Error checking for changes in branch:", error);
-          // Don't fail the entire update if we can't check for changes
+        } else {
+          // Use API calls for GitHub
+          console.log("Using API calls for PR link check (GitHub mode)");
+
+          try {
+            // Get the branch info to see if it exists and has commits
+            const branchResponse = await client.api.getBranch(
+              owner,
+              repo,
+              claudeBranch,
+            );
+
+            // Get base branch info for comparison
+            const baseResponse = await client.api.getBranch(
+              owner,
+              repo,
+              baseBranch,
+            );
+
+            const branchSha = branchResponse.data.commit.sha;
+            const baseSha = baseResponse.data.commit.sha;
+
+            // If SHAs are different, assume there are changes and add PR link
+            if (branchSha !== baseSha) {
+              console.log(
+                `Branch ${claudeBranch} appears to have changes (different SHA from base)`,
+              );
+              const entityType = context.isPR ? "PR" : "Issue";
+              const prTitle = encodeURIComponent(
+                `${entityType} #${context.entityNumber}: Changes from Claude`,
+              );
+              const prBody = encodeURIComponent(
+                `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
+              );
+              const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
+              prLink = `\n[Create a PR](${prUrl})`;
+            } else {
+              console.log(
+                `Branch ${claudeBranch} has same SHA as base, no PR link needed`,
+              );
+            }
+          } catch (error: any) {
+            console.error("Error checking branch:", error);
+
+            // Handle 404 specifically - branch doesn't exist
+            if (error.status === 404) {
+              console.log(
+                `Branch ${claudeBranch} does not exist yet - no PR link needed`,
+              );
+              // Don't add PR link since branch doesn't exist
+              prLink = "";
+            } else {
+              // For other errors, add PR link to be safe
+              console.log("Adding PR link as fallback due to non-404 error");
+              const entityType = context.isPR ? "PR" : "Issue";
+              const prTitle = encodeURIComponent(
+                `${entityType} #${context.entityNumber}: Changes from Claude`,
+              );
+              const prBody = encodeURIComponent(
+                `This PR addresses ${entityType.toLowerCase()} #${context.entityNumber}\n\nGenerated with [Claude Code](https://claude.ai/code)`,
+              );
+              const prUrl = `${serverUrl}/${owner}/${repo}/compare/${baseBranch}...${claudeBranch}?quick_pull=1&title=${prTitle}&body=${prBody}`;
+              prLink = `\n[Create a PR](${prUrl})`;
+            }
+          }
         }
       }
     }
@@ -207,19 +332,20 @@ async function run() {
     // Update the comment using the appropriate API
     try {
       if (isPRReviewComment) {
-        await octokit.rest.pulls.updateReviewComment({
-          owner,
-          repo,
-          comment_id: commentId,
-          body: updatedBody,
-        });
+        await client.api.customRequest(
+          "PATCH",
+          `/api/v1/repos/${owner}/${repo}/pulls/comments/${commentId}`,
+          {
+            body: updatedBody,
+          },
+        );
       } else {
-        await octokit.rest.issues.updateComment({
+        await client.api.updateIssueComment(
           owner,
           repo,
-          comment_id: commentId,
-          body: updatedBody,
-        });
+          commentId,
+          updatedBody,
+        );
       }
       console.log(
         `✅ Updated ${isPRReviewComment ? "PR review" : "issue"} comment ${commentId} with job link`,

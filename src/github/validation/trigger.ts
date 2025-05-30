@@ -15,6 +15,10 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
     inputs: { assigneeTrigger, triggerPhrase, directPrompt },
   } = context;
 
+  console.log(
+    `Checking trigger: event=${context.eventName}, action=${context.eventAction}, phrase='${triggerPhrase}', assignee='${assigneeTrigger}', direct='${directPrompt}'`,
+  );
+
   // If direct prompt is provided, always trigger
   if (directPrompt) {
     console.log(`Direct prompt provided, triggering action`);
@@ -24,8 +28,12 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
   // Check for assignee trigger
   if (isIssuesEvent(context) && context.eventAction === "assigned") {
     // Remove @ symbol from assignee_trigger if present
-    let triggerUser = assigneeTrigger.replace(/^@/, "");
+    let triggerUser = assigneeTrigger?.replace(/^@/, "") || "";
     const assigneeUsername = context.payload.issue.assignee?.login || "";
+
+    console.log(
+      `Checking assignee trigger: user='${triggerUser}', assignee='${assigneeUsername}'`,
+    );
 
     if (triggerUser && assigneeUsername === triggerUser) {
       console.log(`Issue assigned to trigger user '${triggerUser}'`);

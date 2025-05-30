@@ -45,7 +45,10 @@ inputs:
     description: "Anthropic API key (required for direct API, not needed for Bedrock/Vertex)"
     required: false
   github_token:
-    description: "GitHub token with repo and pull request permissions (optional if using GitHub App)"
+    description: "GitHub token with repo and pull request permissions (defaults to GITHUB_TOKEN)"
+    required: false
+  gitea_api_url:
+    description: "Gitea server URL (e.g., https://gitea.example.com, defaults to GitHub API)"
     required: false
   use_bedrock:
     description: "Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API"
@@ -93,7 +96,9 @@ runs:
         CUSTOM_INSTRUCTIONS: ${{ inputs.custom_instructions }}
         DIRECT_PROMPT: ${{ inputs.direct_prompt }}
         OVERRIDE_GITHUB_TOKEN: ${{ inputs.github_token }}
+        GITHUB_TOKEN: ${{ github.token }}
         GITHUB_RUN_ID: ${{ github.run_id }}
+        GITEA_API_URL: ${{ inputs.gitea_api_url }}
 
     - name: Run Claude Code
       id: claude-code
@@ -110,27 +115,33 @@ runs:
         use_vertex: ${{ inputs.use_vertex }}
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
       env:
-        # Model configuration
+        # Core configuration
+        PROMPT_FILE: /tmp/claude-prompts/claude-prompt.txt
+        ALLOWED_TOOLS: ${{ env.ALLOWED_TOOLS }}
+        DISALLOWED_TOOLS: ${{ env.DISALLOWED_TOOLS }}
+        TIMEOUT_MINUTES: ${{ inputs.timeout_minutes }}
+        MODEL: ${{ inputs.model || inputs.anthropic_model }}
         ANTHROPIC_MODEL: ${{ inputs.model || inputs.anthropic_model }}
+        MCP_CONFIG: ${{ steps.prepare.outputs.mcp_config }}
+        USE_BEDROCK: ${{ inputs.use_bedrock }}
+        USE_VERTEX: ${{ inputs.use_vertex }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+
+        # GitHub token for repository access
         GITHUB_TOKEN: ${{ steps.prepare.outputs.GITHUB_TOKEN }}
+        GITEA_API_URL: ${{ inputs.gitea_api_url }}
 
-        # Provider configuration
+        # Provider configuration (for future cloud provider support)
         ANTHROPIC_BASE_URL: ${{ env.ANTHROPIC_BASE_URL }}
-
-        # AWS configuration
         AWS_REGION: ${{ env.AWS_REGION }}
         AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
         AWS_SESSION_TOKEN: ${{ env.AWS_SESSION_TOKEN }}
         ANTHROPIC_BEDROCK_BASE_URL: ${{ env.ANTHROPIC_BEDROCK_BASE_URL }}
-
-        # GCP configuration
         ANTHROPIC_VERTEX_PROJECT_ID: ${{ env.ANTHROPIC_VERTEX_PROJECT_ID }}
         CLOUD_ML_REGION: ${{ env.CLOUD_ML_REGION }}
         GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
         ANTHROPIC_VERTEX_BASE_URL: ${{ env.ANTHROPIC_VERTEX_BASE_URL }}
-
-        # Model-specific regions for Vertex
         VERTEX_REGION_CLAUDE_3_5_HAIKU: ${{ env.VERTEX_REGION_CLAUDE_3_5_HAIKU }}
         VERTEX_REGION_CLAUDE_3_5_SONNET: ${{ env.VERTEX_REGION_CLAUDE_3_5_SONNET }}
         VERTEX_REGION_CLAUDE_3_7_SONNET: ${{ env.VERTEX_REGION_CLAUDE_3_7_SONNET }}
@@ -156,23 +167,17 @@ runs:
         TRIGGER_USERNAME: ${{ github.event.comment.user.login || github.event.issue.user.login || github.event.pull_request.user.login || github.event.sender.login || github.triggering_actor || github.actor || '' }}
         PREPARE_SUCCESS: ${{ steps.prepare.outcome == 'success' }}
         PREPARE_ERROR: ${{ steps.prepare.outputs.prepare_error || '' }}
+        GITEA_API_URL: ${{ inputs.gitea_api_url }}
 
     - name: Display Claude Code Report
       if: steps.prepare.outputs.contains_trigger == 'true' && steps.claude-code.outputs.execution_file != ''
       shell: bash
       run: |
-        echo "## Claude Code Report" >> $GITHUB_STEP_SUMMARY
-        echo '```json' >> $GITHUB_STEP_SUMMARY
-        cat "${{ steps.claude-code.outputs.execution_file }}" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-
-    - name: Revoke app token
-      if: always() && inputs.github_token == ''
-      shell: bash
-      run: |
-        curl -L \
-          -X DELETE \
-          -H "Accept: application/vnd.github+json" \
-          -H "Authorization: Bearer ${{ steps.prepare.outputs.GITHUB_TOKEN }}" \
-          -H "X-GitHub-Api-Version: 2022-11-28" \
-          ${GITHUB_API_URL:-https://api.github.com}/installation/token
+        if [ -f "${{ steps.claude-code.outputs.execution_file }}" ]; then
+          echo "## Claude Code Report" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat "${{ steps.claude-code.outputs.execution_file }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ Claude Code execution completed but no report file was generated" >> $GITHUB_STEP_SUMMARY
+        fi
