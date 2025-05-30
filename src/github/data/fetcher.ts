@@ -96,6 +96,7 @@ export async function fetchGitHubData({
           }));
         } catch (error) {
           console.warn("Failed to fetch PR comments:", error);
+          comments = []; // Ensure we have an empty array
         }
 
         // Try to fetch files
@@ -107,12 +108,13 @@ export async function fetchGitHubData({
           });
           changedFiles = filesResponse.data.map(file => ({
             path: file.filename,
-            additions: file.additions,
-            deletions: file.deletions,
-            changeType: file.status,
+            additions: file.additions || 0,
+            deletions: file.deletions || 0,
+            changeType: file.status || "modified",
           }));
         } catch (error) {
           console.warn("Failed to fetch PR files:", error);
+          changedFiles = []; // Ensure we have an empty array
         }
 
         reviewData = { nodes: [] }; // Simplified for Gitea
@@ -149,6 +151,7 @@ export async function fetchGitHubData({
           }));
         } catch (error) {
           console.warn("Failed to fetch issue comments:", error);
+          comments = []; // Ensure we have an empty array
         }
       }
     } else {

@@ -171,6 +171,10 @@ permissions:
 **Error**: "Failed to check permissions: HttpError: Bad credentials"
 **Solution**: This is normal in Gitea environments. The action automatically detects Gitea and bypasses GitHub-specific permission checks.
 
+#### 1a. User Profile API Errors
+**Error**: "Prepare step failed with error: Visit Project" or "GET /users/{username} - 404"
+**Solution**: This occurs when Gitea's user profile API differs from GitHub's. The action automatically detects Gitea and skips user type validation.
+
 #### 2. Limited Event Support
 Some GitHub Events may not be fully supported in Gitea. Use basic triggers:
 - `issue_comment` for comments

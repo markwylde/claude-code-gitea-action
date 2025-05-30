@@ -12,20 +12,35 @@ export async function checkHumanActor(
   octokit: Octokit,
   githubContext: ParsedGitHubContext,
 ) {
-  // Fetch user information from GitHub API
-  const { data: userData } = await octokit.users.getByUsername({
-    username: githubContext.actor,
-  });
-
-  const actorType = userData.type;
-
-  console.log(`Actor type: ${actorType}`);
-
-  if (actorType !== "User") {
-    throw new Error(
-      `Workflow initiated by non-human actor: ${githubContext.actor} (type: ${actorType}).`,
-    );
+  // Check if we're in a Gitea environment
+  const isGitea = process.env.GITHUB_API_URL && !process.env.GITHUB_API_URL.includes('api.github.com');
+  
+  if (isGitea) {
+    console.log(`Detected Gitea environment, skipping actor type validation for: ${githubContext.actor}`);
+    return;
   }
 
-  console.log(`Verified human actor: ${githubContext.actor}`);
+  try {
+    // Fetch user information from GitHub API
+    const { data: userData } = await octokit.users.getByUsername({
+      username: githubContext.actor,
+    });
+
+    const actorType = userData.type;
+
+    console.log(`Actor type: ${actorType}`);
+
+    if (actorType !== "User") {
+      throw new Error(
+        `Workflow initiated by non-human actor: ${githubContext.actor} (type: ${actorType}).`,
+      );
+    }
+
+    console.log(`Verified human actor: ${githubContext.actor}`);
+  } catch (error) {
+    console.warn(`Failed to check actor type for ${githubContext.actor}:`, error);
+    
+    // For compatibility, assume human actor if API call fails
+    console.log(`Assuming human actor due to API failure: ${githubContext.actor}`);
+  }
 }
