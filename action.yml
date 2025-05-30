@@ -48,7 +48,7 @@ inputs:
     description: "GitHub token with repo and pull request permissions (defaults to GITHUB_TOKEN)"
     required: false
   gitea_api_url:
-    description: "Gitea API URL (e.g., https://gitea.example.com/api/v1, defaults to GitHub API)"
+    description: "Gitea server URL (e.g., https://gitea.example.com, defaults to GitHub API)"
     required: false
   use_bedrock:
     description: "Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API"

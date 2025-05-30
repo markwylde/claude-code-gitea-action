@@ -75,7 +75,7 @@ jobs:
 | `direct_prompt`       | Direct prompt for Claude to execute automatically without needing a trigger (for automated workflows)                | No       | -          |
 | `timeout_minutes`     | Timeout in minutes for execution                                                                                     | No       | `30`       |
 | `github_token`        | GitHub token for Claude to operate with. **Only include this if you're connecting a custom GitHub app of your own!** | No       | -          |
-| `gitea_api_url`       | Gitea API URL (e.g., `https://gitea.example.com/api/v1`) for Gitea installations. Leave empty for GitHub.            | No       | GitHub API |
+| `gitea_api_url`       | Gitea server URL (e.g., `https://gitea.example.com`) for Gitea installations. Leave empty for GitHub.                | No       | GitHub API |
 | `model`               | Model to use (provider-specific format required for Bedrock/Vertex)                                                  | No       | -          |
 | `anthropic_model`     | **DEPRECATED**: Use `model` instead. Kept for backward compatibility.                                                | No       | -          |
 | `use_bedrock`         | Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API                                          | No       | `false`    |
@@ -96,7 +96,7 @@ This action has been enhanced to work with Gitea installations. The main differe
 
 1. **Local Git Operations**: Instead of using API-based file operations (which have limited support in Gitea), this action uses local git commands to create branches, commit files, and push changes.
 
-2. **API URL Configuration**: You must specify your Gitea API URL using the `gitea_api_url` input.
+2. **API URL Configuration**: You must specify your Gitea server URL using the `gitea_api_url` input.
 
 ### Example Gitea Workflow
 
@@ -114,7 +114,7 @@ jobs:
       - uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          gitea_api_url: "https://gitea.example.com/api/v1"
+          gitea_api_url: "https://gitea.example.com"
           github_token: ${{ secrets.GITEA_TOKEN }}
 ```
 

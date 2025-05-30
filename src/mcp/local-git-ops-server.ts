@@ -258,6 +258,54 @@ server.tool(
   },
 );
 
+// Delete files tool
+server.tool(
+  "delete_files",
+  "Delete one or more files and commit the deletion using local git operations",
+  {
+    files: z
+      .array(z.string())
+      .describe(
+        'Array of file paths relative to repository root (e.g. ["src/old-file.js", "docs/deprecated.md"])',
+      ),
+    message: z.string().describe("Commit message for the deletion"),
+  },
+  async ({ files, message }) => {
+    try {
+      // Remove the specified files
+      for (const file of files) {
+        const filePath = file.startsWith("/") ? file.slice(1) : file;
+        runGitCommand(`git rm "${filePath}"`);
+      }
+
+      // Commit the deletions
+      runGitCommand(`git commit -m "${message}"`);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Successfully deleted and committed ${files.length} file(s): ${files.join(", ")}`,
+          },
+        ],
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error deleting files: ${errorMessage}`,
+          },
+        ],
+        error: errorMessage,
+        isError: true,
+      };
+    }
+  },
+);
+
 // Get git status tool
 server.tool("git_status", "Get the current git status", {}, async () => {
   try {

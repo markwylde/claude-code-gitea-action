@@ -100,6 +100,10 @@ export async function setupBranch(
     console.log(`Working in directory: ${repoDir}`);
 
     try {
+      // Check if we're in a git repository
+      console.log(`Checking if we're in a git repository...`);
+      await $`git status`;
+
       // Ensure we have the latest version of the source branch
       console.log(`Fetching latest ${sourceBranch}...`);
       await $`git fetch origin ${sourceBranch}`;
@@ -109,18 +113,38 @@ export async function setupBranch(
       await $`git checkout ${sourceBranch}`;
 
       // Pull latest changes
+      console.log(`Pulling latest changes for ${sourceBranch}...`);
       await $`git pull origin ${sourceBranch}`;
 
       // Create and checkout the new branch
       console.log(`Creating new branch: ${newBranch}`);
       await $`git checkout -b ${newBranch}`;
 
-      console.log(`Successfully created and checked out branch: ${newBranch}`);
-    } catch (gitError: any) {
+      // Verify the branch was created
+      const currentBranch = await $`git branch --show-current`;
       console.log(
-        `Local git operations completed. Branch ${newBranch} ready for use.`,
+        `Current branch after creation: ${currentBranch.stdout.trim()}`,
       );
-      // Don't fail here - the branch will be created when files are committed
+
+      if (currentBranch.stdout.trim() === newBranch) {
+        console.log(
+          `✅ Successfully created and checked out branch: ${newBranch}`,
+        );
+      } else {
+        throw new Error(
+          `Branch creation failed. Expected ${newBranch}, got ${currentBranch.stdout.trim()}`,
+        );
+      }
+    } catch (gitError: any) {
+      console.error(`❌ Git operations failed:`, gitError);
+      console.error(`Error message: ${gitError.message}`);
+      console.error(`Error stdout: ${gitError.stdout}`);
+      console.error(`Error stderr: ${gitError.stderr}`);
+
+      // This is a critical failure - the branch MUST be created for Claude to work
+      throw new Error(
+        `Failed to create branch ${newBranch}: ${gitError.message}`,
+      );
     }
 
     console.log(`Branch setup completed for: ${newBranch}`);
