@@ -94,11 +94,11 @@ export async function setupBranch(
 
   try {
     // Get the SHA of the source branch
-    // For Gitea, use just the branch name instead of heads/ prefix
+    // For Gitea, use heads/ prefix like GitHub
     const sourceBranchRef = await octokits.rest.git.getRef({
       owner,
       repo,
-      ref: sourceBranch,
+      ref: `heads/${sourceBranch}`,
     });
 
     const currentSHA = sourceBranchRef.data.object.sha;
