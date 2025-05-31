@@ -576,7 +576,8 @@ ${
       - Commit changes using mcp__local_git_ops__commit_files (works for both new and existing files)
       - Use mcp__local_git_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
       - CRITICAL: After committing, you MUST push the branch to the remote repository using mcp__local_git_ops__push_branch
-    ` : `
+    `
+            : `}
       - IMPORTANT: You are currently on the base branch (${eventData.baseBranch}). Before making changes, you should first check if there's already an existing claude branch for this ${eventData.isPR ? "PR" : "issue"}.
       - FIRST: Use Bash to run \`git branch -r | grep "claude/${eventData.isPR ? "pr" : "issue"}-${eventData.isPR ? eventData.prNumber : eventData.issueNumber}"\` to check for existing branches.
       - If an existing claude branch is found:
@@ -670,7 +671,8 @@ c. List key information from the provided data
 d. Outline the main tasks and potential challenges
 e. Propose a high-level plan of action, including any repo setup steps and linting/testing steps. Remember, you are on a fresh checkout of the branch, so you may need to install dependencies, run build commands, etc.
 f. If you are unable to complete certain steps, such as running a linter or test suite, particularly due to missing permissions, explain this in your comment so that the user can update your \`--allowedTools\`.
-`;
+`
+      }`;
 
   if (context.customInstructions) {
     promptContent += `\n\nCUSTOM INSTRUCTIONS:\n${context.customInstructions}`;
