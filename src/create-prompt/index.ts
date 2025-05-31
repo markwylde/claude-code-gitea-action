@@ -588,7 +588,6 @@ ${
         - The body should include:
           - A clear description of the changes
           - Reference to the original ${eventData.isPR ? "PR" : "issue"}
-          - The signature: "Generated with [Claude Code](https://claude.ai/code)"
         - Just include the markdown link with text "Create a PR" - do not add explanatory text before it like "You can create a PR using this link"`
             : `
       - IMPORTANT: You are currently on the base branch (${eventData.baseBranch}). Before making changes, you should first check if there's already an existing claude branch for this ${eventData.isPR ? "PR" : "issue"}.
@@ -616,7 +615,6 @@ ${
         - The body should include:
           - A clear description of the changes
           - Reference to the original ${eventData.isPR ? "PR" : "issue"}
-          - The signature: "Generated with [Claude Code](https://claude.ai/code)"
         - Just include the markdown link with text "Create a PR" - do not add explanatory text before it like "You can create a PR using this link"`
       }
 
