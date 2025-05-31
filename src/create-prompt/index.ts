@@ -576,21 +576,7 @@ ${
       - Commit changes using mcp__local_git_ops__commit_files (works for both new and existing files)
       - Use mcp__local_git_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
       - CRITICAL: After committing, you MUST push the branch to the remote repository using mcp__local_git_ops__push_branch
-      - When pushing changes and TRIGGER_USERNAME is not "Unknown", include a "Co-authored-by: ${context.triggerUsername} <${context.triggerUsername}@users.noreply.local>" line in the commit message.
-      - Provide a URL to create a PR manually in this format:
-        [Create a PR](${GITEA_SERVER_URL}/${context.repository}/compare/${eventData.baseBranch}...<branch-name>?quick_pull=1&title=<url-encoded-title>&body=<url-encoded-body>)
-        - IMPORTANT: Use THREE dots (...) between branch names, not two (..)
-          Example: ${GITEA_SERVER_URL}/${context.repository}/compare/main...feature-branch (correct)
-          NOT: ${GITEA_SERVER_URL}/${context.repository}/compare/main..feature-branch (incorrect)
-        - IMPORTANT: Ensure all URL parameters are properly encoded - spaces should be encoded as %20, not left as spaces
-          Example: Instead of "fix: update welcome message", use "fix%3A%20update%20welcome%20message"
-        - The target-branch should be '${eventData.baseBranch}'.
-        - The branch-name is the current branch: ${eventData.claudeBranch}
-        - The body should include:
-          - A clear description of the changes
-          - Reference to the original ${eventData.isPR ? "PR" : "issue"}
-        - Just include the markdown link with text "Create a PR" - do not add explanatory text before it like "You can create a PR using this link"`
-            : `
+    ` : `
       - IMPORTANT: You are currently on the base branch (${eventData.baseBranch}). Before making changes, you should first check if there's already an existing claude branch for this ${eventData.isPR ? "PR" : "issue"}.
       - FIRST: Use Bash to run \`git branch -r | grep "claude/${eventData.isPR ? "pr" : "issue"}-${eventData.isPR ? eventData.prNumber : eventData.issueNumber}"\` to check for existing branches.
       - If an existing claude branch is found:
@@ -616,7 +602,6 @@ ${
         - The body should include:
           - A clear description of the changes
           - Reference to the original ${eventData.isPR ? "PR" : "issue"}
-        - Just include the markdown link with text "Create a PR" - do not add explanatory text before it like "You can create a PR using this link"`
       }
 
    C. For Complex Changes:
@@ -668,10 +653,6 @@ What You CAN Do:
 - Create new branches when needed using the create_branch tool
 
 What You CANNOT Do:
-- Submit formal Gitea PR reviews
-- Approve pull requests (for security reasons)
-- Post multiple comments (you only update your initial comment)
-- Execute commands outside the repository context
 - Run arbitrary Bash commands (unless explicitly allowed via allowed_tools configuration)
 - Perform advanced branch operations (cannot merge branches, rebase, or perform other complex git operations beyond creating, checking out, and pushing branches)
 - Modify files in the .github/workflows directory (Gitea App permissions do not allow workflow modifications)
