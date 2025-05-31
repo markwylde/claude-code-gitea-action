@@ -758,6 +758,403 @@ server.tool(
   },
 );
 
+// Update a pull request
+server.tool(
+  "update_pull_request",
+  "Update an existing pull request",
+  {
+    pull_number: z.number().describe("The pull request number to update"),
+    title: z.string().optional().describe("New pull request title"),
+    body: z.string().optional().describe("New pull request body/description"),
+    base: z.string().optional().describe("New base branch name"),
+    assignee: z
+      .string()
+      .optional()
+      .describe("Username to assign the pull request to"),
+    assignees: z
+      .array(z.string())
+      .optional()
+      .describe("Array of usernames to assign the pull request to"),
+    milestone: z
+      .number()
+      .optional()
+      .describe("Milestone ID to associate with the pull request"),
+    labels: z
+      .array(z.string())
+      .optional()
+      .describe("Array of label names to apply to the pull request"),
+    state: z.enum(["open", "closed"]).optional().describe("Pull request state"),
+    allow_maintainer_edit: z
+      .boolean()
+      .optional()
+      .describe("Allow maintainer edits"),
+  },
+  async ({
+    pull_number,
+    title,
+    body,
+    base,
+    assignee,
+    assignees,
+    milestone,
+    labels,
+    state,
+    allow_maintainer_edit,
+  }) => {
+    try {
+      const updateData: any = {};
+
+      if (title) updateData.title = title;
+      if (body !== undefined) updateData.body = body;
+      if (base) updateData.base = base;
+      if (assignee) updateData.assignee = assignee;
+      if (assignees) updateData.assignees = assignees;
+      if (milestone) updateData.milestone = milestone;
+      if (labels) updateData.labels = labels;
+      if (state) updateData.state = state;
+      if (allow_maintainer_edit !== undefined)
+        updateData.allow_maintainer_edit = allow_maintainer_edit;
+
+      const pull = await giteaRequest(
+        `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/pulls/${pull_number}`,
+        "PATCH",
+        updateData,
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(pull, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(`[GITEA-MCP] Error updating pull request: ${errorMessage}`);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error updating pull request: ${errorMessage}`,
+          },
+        ],
+        error: errorMessage,
+        isError: true,
+      };
+    }
+  },
+);
+
+// Merge a pull request
+server.tool(
+  "merge_pull_request",
+  "Merge a pull request",
+  {
+    pull_number: z.number().describe("The pull request number to merge"),
+    merge_method: z
+      .enum([
+        "merge",
+        "rebase",
+        "rebase-merge",
+        "squash",
+        "fast-forward-only",
+        "manually-merged",
+      ])
+      .optional()
+      .default("merge")
+      .describe("Merge strategy to use"),
+    merge_commit_id: z
+      .string()
+      .optional()
+      .describe("Specific commit ID to merge"),
+    merge_message: z
+      .string()
+      .optional()
+      .describe("Custom merge commit message"),
+    merge_title: z.string().optional().describe("Custom merge commit title"),
+  },
+  async ({
+    pull_number,
+    merge_method = "merge",
+    merge_commit_id,
+    merge_message,
+    merge_title,
+  }) => {
+    try {
+      const mergeData: any = { Do: merge_method };
+
+      if (merge_commit_id) mergeData.MergeCommitID = merge_commit_id;
+      if (merge_message) mergeData.MergeMessageField = merge_message;
+      if (merge_title) mergeData.MergeTitleField = merge_title;
+
+      const result = await giteaRequest(
+        `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/pulls/${pull_number}/merge`,
+        "POST",
+        mergeData,
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(`[GITEA-MCP] Error merging pull request: ${errorMessage}`);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error merging pull request: ${errorMessage}`,
+          },
+        ],
+        error: errorMessage,
+        isError: true,
+      };
+    }
+  },
+);
+
+// Update pull request branch
+server.tool(
+  "update_pull_request_branch",
+  "Update a pull request branch to latest base",
+  {
+    pull_number: z.number().describe("The pull request number to update"),
+    style: z
+      .enum(["merge", "rebase"])
+      .optional()
+      .default("merge")
+      .describe("How to update the pull request branch"),
+  },
+  async ({ pull_number, style = "merge" }) => {
+    try {
+      let endpoint = `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/pulls/${pull_number}/update`;
+      if (style) {
+        endpoint += `?style=${style}`;
+      }
+
+      const result = await giteaRequest(endpoint, "POST");
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Successfully updated pull request ${pull_number} branch using ${style} strategy`,
+          },
+        ],
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(
+        `[GITEA-MCP] Error updating pull request branch: ${errorMessage}`,
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error updating pull request branch: ${errorMessage}`,
+          },
+        ],
+        error: errorMessage,
+        isError: true,
+      };
+    }
+  },
+);
+
+// Check if pull request is merged
+server.tool(
+  "check_pull_request_merged",
+  "Check if a pull request is merged",
+  {
+    pull_number: z.number().describe("The pull request number to check"),
+  },
+  async ({ pull_number }) => {
+    try {
+      await giteaRequest(
+        `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/pulls/${pull_number}/merge`,
+        "GET",
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Pull request ${pull_number} is merged`,
+          },
+        ],
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("404")) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Pull request ${pull_number} is not merged`,
+            },
+          ],
+        };
+      }
+      console.error(
+        `[GITEA-MCP] Error checking pull request merge status: ${errorMessage}`,
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error checking pull request merge status: ${errorMessage}`,
+          },
+        ],
+        error: errorMessage,
+        isError: true,
+      };
+    }
+  },
+);
+
+// Set the active branch of an issue
+server.tool(
+  "set_issue_branch",
+  "Set the active branch reference for an issue",
+  {
+    issue_number: z.number().describe("The issue number to update"),
+    branch: z
+      .string()
+      .describe("The branch name to set as active for this issue"),
+  },
+  async ({ issue_number, branch }) => {
+    try {
+      const updateData = { ref: branch };
+
+      const issue = await giteaRequest(
+        `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues/${issue_number}`,
+        "PATCH",
+        updateData,
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(issue, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(`[GITEA-MCP] Error setting issue branch: ${errorMessage}`);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error setting issue branch: ${errorMessage}`,
+          },
+        ],
+        error: errorMessage,
+        isError: true,
+      };
+    }
+  },
+);
+
+// List repository branches
+server.tool(
+  "list_branches",
+  "List all branches in the repository",
+  {
+    page: z.number().optional().describe("Page number for pagination"),
+    limit: z.number().optional().describe("Number of items per page"),
+  },
+  async ({ page, limit }) => {
+    try {
+      let endpoint = `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/branches`;
+      const params = new URLSearchParams();
+
+      if (page) params.append("page", page.toString());
+      if (limit) params.append("limit", limit.toString());
+
+      if (params.toString()) {
+        endpoint += `?${params.toString()}`;
+      }
+
+      const branches = await giteaRequest(endpoint);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(branches, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(`[GITEA-MCP] Error listing branches: ${errorMessage}`);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error listing branches: ${errorMessage}`,
+          },
+        ],
+        error: errorMessage,
+        isError: true,
+      };
+    }
+  },
+);
+
+// Get a specific branch
+server.tool(
+  "get_branch",
+  "Get details of a specific branch",
+  {
+    branch_name: z.string().describe("The branch name to fetch"),
+  },
+  async ({ branch_name }) => {
+    try {
+      const branch = await giteaRequest(
+        `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/branches/${encodeURIComponent(branch_name)}`,
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(branch, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(`[GITEA-MCP] Error getting branch: ${errorMessage}`);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error getting branch: ${errorMessage}`,
+          },
+        ],
+        error: errorMessage,
+        isError: true,
+      };
+    }
+  },
+);
+
 async function runServer() {
   console.log(`[GITEA-MCP] Starting MCP server transport...`);
   const transport = new StdioServerTransport();

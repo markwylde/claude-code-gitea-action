@@ -36,6 +36,18 @@ const BASE_ALLOWED_TOOLS = [
   "mcp__local_git_ops__checkout_branch",
   "mcp__local_git_ops__create_branch",
   "mcp__local_git_ops__git_status",
+  "mcp__gitea__create_pull_request",
+  "mcp__gitea__update_pull_request",
+  "mcp__gitea__merge_pull_request",
+  "mcp__gitea__update_pull_request_branch",
+  "mcp__gitea__check_pull_request_merged",
+  "mcp__gitea__set_issue_branch",
+  "mcp__gitea__list_issues",
+  "mcp__gitea__create_issue",
+  "mcp__gitea__update_issue",
+  "mcp__gitea__add_issue_comment",
+  "mcp__gitea__list_branches",
+  "mcp__gitea__get_branch",
 ];
 const DISALLOWED_TOOLS = ["WebSearch", "WebFetch"];
 
