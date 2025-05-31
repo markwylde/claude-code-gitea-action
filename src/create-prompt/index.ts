@@ -536,7 +536,7 @@ ${
     ? `
 4. Check for Existing Branch (for issues and closed PRs):
    - Before implementing changes, check if there's already a claude branch for this ${eventData.isPR ? "PR" : "issue"}.
-   - Use Bash to run \`git branch -r | grep "claude/${eventData.isPR ? "pr" : "issue"}-${eventData.isPR ? eventData.prNumber : eventData.issueNumber}"\` to search for existing branches.
+   - Use the mcp__gitea__list_branches tool to list branches.
    - If found, use mcp__local_git_ops__checkout_branch to switch to the existing branch (set fetch_remote=true).
    - If not found, you'll create a new branch when making changes (see Execute Actions section).
    - Mark this todo as complete by checking the box.
