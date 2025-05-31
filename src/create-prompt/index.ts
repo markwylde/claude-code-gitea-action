@@ -34,6 +34,7 @@ const BASE_ALLOWED_TOOLS = [
   "mcp__local_git_ops__push_branch",
   "mcp__local_git_ops__create_pull_request",
   "mcp__local_git_ops__checkout_branch",
+  "mcp__local_git_ops__create_branch",
   "mcp__local_git_ops__git_status",
 ];
 const DISALLOWED_TOOLS = ["WebSearch", "WebFetch"];
@@ -513,7 +514,20 @@ ${context.directPrompt ? `   - DIRECT INSTRUCTION: A direct instruction was prov
    - For implementation requests, assess if they are straightforward or complex.
    - Mark this todo as complete by checking the box.
 
-4. Execute Actions:
+${
+  !eventData.isPR || !eventData.claudeBranch
+    ? `
+4. Check for Existing Branch (for issues and closed PRs):
+   - Before implementing changes, check if there's already a claude branch for this ${eventData.isPR ? "PR" : "issue"}.
+   - Use Bash to run \`git branch -r | grep "claude/${eventData.isPR ? "pr" : "issue"}-${eventData.isPR ? eventData.prNumber : eventData.issueNumber}"\` to search for existing branches.
+   - If found, use mcp__local_git_ops__checkout_branch to switch to the existing branch (set fetch_remote=true).
+   - If not found, you'll create a new branch when making changes (see Execute Actions section).
+   - Mark this todo as complete by checking the box.
+
+5. Execute Actions:`
+    : `
+4. Execute Actions:`
+}
    - Continually update your todo list as you discover new requirements or realize tasks can be broken down.
 
    A. For Answering Questions and Code Reviews:
@@ -538,15 +552,14 @@ ${context.directPrompt ? `   - DIRECT INSTRUCTION: A direct instruction was prov
       - Use mcp__local_git_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
       - CRITICAL: After committing, you MUST push the branch to the remote repository using mcp__local_git_ops__push_branch
       - When pushing changes with this tool and TRIGGER_USERNAME is not "Unknown", include a "Co-authored-by: ${context.triggerUsername} <${context.triggerUsername}@users.noreply.local>" line in the commit message.`
-          : `
-      - You are already on the correct branch (${eventData.claudeBranch || "the PR branch"}). Do not create a new branch.
+          : eventData.claudeBranch
+            ? `
+      - You are already on the correct branch (${eventData.claudeBranch}). Do not create a new branch.
       - Commit changes using mcp__local_git_ops__commit_files (works for both new and existing files)
       - Use mcp__local_git_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
       - CRITICAL: After committing, you MUST push the branch to the remote repository using mcp__local_git_ops__push_branch
       - When pushing changes and TRIGGER_USERNAME is not "Unknown", include a "Co-authored-by: ${context.triggerUsername} <${context.triggerUsername}@users.noreply.local>" line in the commit message.
-      ${
-        eventData.claudeBranch
-          ? `- Provide a URL to create a PR manually in this format:
+      - Provide a URL to create a PR manually in this format:
         [Create a PR](${GITEA_SERVER_URL}/${context.repository}/compare/${eventData.baseBranch}...<branch-name>?quick_pull=1&title=<url-encoded-title>&body=<url-encoded-body>)
         - IMPORTANT: Use THREE dots (...) between branch names, not two (..)
           Example: ${GITEA_SERVER_URL}/${context.repository}/compare/main...feature-branch (correct)
@@ -560,8 +573,34 @@ ${context.directPrompt ? `   - DIRECT INSTRUCTION: A direct instruction was prov
           - Reference to the original ${eventData.isPR ? "PR" : "issue"}
           - The signature: "Generated with [Claude Code](https://claude.ai/code)"
         - Just include the markdown link with text "Create a PR" - do not add explanatory text before it like "You can create a PR using this link"`
-          : ""
-      }`
+            : `
+      - IMPORTANT: You are currently on the base branch (${eventData.baseBranch}). Before making changes, you should first check if there's already an existing claude branch for this ${eventData.isPR ? "PR" : "issue"}.
+      - FIRST: Use Bash to run \`git branch -r | grep "claude/${eventData.isPR ? "pr" : "issue"}-${eventData.isPR ? eventData.prNumber : eventData.issueNumber}"\` to check for existing branches.
+      - If an existing claude branch is found:
+        - Use mcp__local_git_ops__checkout_branch to switch to the existing branch (set fetch_remote=true)
+        - Continue working on that branch rather than creating a new one
+      - If NO existing claude branch is found:
+        - Create a new branch using mcp__local_git_ops__create_branch
+        - Use a descriptive branch name following the pattern: claude/${eventData.isPR ? "pr" : "issue"}-${eventData.isPR ? eventData.prNumber : eventData.issueNumber}-<short-description>
+        - Example: claude/issue-123-fix-login-bug or claude/issue-456-add-user-profile
+      - After being on the correct branch (existing or new), commit changes using mcp__local_git_ops__commit_files (works for both new and existing files)
+      - Use mcp__local_git_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
+      - CRITICAL: After committing, you MUST push the branch to the remote repository using mcp__local_git_ops__push_branch
+      - When pushing changes and TRIGGER_USERNAME is not "Unknown", include a "Co-authored-by: ${context.triggerUsername} <${context.triggerUsername}@users.noreply.local>" line in the commit message.
+      - Provide a URL to create a PR manually in this format:
+        [Create a PR](${GITEA_SERVER_URL}/${context.repository}/compare/${eventData.baseBranch}...<branch-name>?quick_pull=1&title=<url-encoded-title>&body=<url-encoded-body>)
+        - IMPORTANT: Use THREE dots (...) between branch names, not two (..)
+          Example: ${GITEA_SERVER_URL}/${context.repository}/compare/main...feature-branch (correct)
+          NOT: ${GITEA_SERVER_URL}/${context.repository}/compare/main..feature-branch (incorrect)
+        - IMPORTANT: Ensure all URL parameters are properly encoded - spaces should be encoded as %20, not left as spaces
+          Example: Instead of "fix: update welcome message", use "fix%3A%20update%20welcome%20message"
+        - The target-branch should be '${eventData.baseBranch}'.
+        - The branch-name is your created branch name
+        - The body should include:
+          - A clear description of the changes
+          - Reference to the original ${eventData.isPR ? "PR" : "issue"}
+          - The signature: "Generated with [Claude Code](https://claude.ai/code)"
+        - Just include the markdown link with text "Create a PR" - do not add explanatory text before it like "You can create a PR using this link"`
       }
 
    C. For Complex Changes:
@@ -573,12 +612,12 @@ ${context.directPrompt ? `   - DIRECT INSTRUCTION: A direct instruction was prov
       - Follow the same pushing strategy as for straightforward changes (see section B above).
       - Or explain why it's too complex: mark todo as completed in checklist with explanation.
 
-5. Final Update:
+${!eventData.isPR || !eventData.claudeBranch ? `6. Final Update:` : `5. Final Update:`}
    - Always update the GitHub comment to reflect the current todo state.
    - When all todos are completed, remove the spinner and add a brief summary of what was accomplished, and what was not done.
    - Note: If you see previous Claude comments with headers like "**Claude finished @user's task**" followed by "---", do not include this in your comment. The system adds this automatically.
    - If you changed any files locally, you must commit them using mcp__local_git_ops__commit_files AND push the branch using mcp__local_git_ops__push_branch before saying that you're done.
-   ${eventData.claudeBranch ? `- If you created anything in your branch, your comment must include the PR URL with prefilled title and body mentioned above.` : ""}
+   ${!eventData.isPR || !eventData.claudeBranch ? `- If you created a branch and made changes, your comment must include the PR URL with prefilled title and body mentioned above.` : ""}
 
 Important Notes:
 - All communication must happen through GitHub PR comments.
@@ -586,7 +625,7 @@ Important Notes:
 - This includes ALL responses: code reviews, answers to questions, progress updates, and final results.${eventData.isPR ? "\n- PR CRITICAL: After reading files and forming your response, you MUST post it by calling mcp__github__update_issue_comment. Do NOT just respond with a normal response, the user will not see it." : ""}
 - You communicate exclusively by editing your single comment - not through any other means.
 - Use this spinner HTML when work is in progress: <img src="https://raw.githubusercontent.com/markwylde/claude-code-gitea-action/refs/heads/gitea/assets/spinner.gif" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />
-${eventData.isPR && !eventData.claudeBranch ? `- Always push to the existing branch when triggered on a PR.` : `- IMPORTANT: You are already on the correct branch (${eventData.claudeBranch || "the created branch"}). Never create new branches when triggered on issues or closed/merged PRs.`}
+${eventData.isPR && !eventData.claudeBranch ? `- Always push to the existing branch when triggered on a PR.` : eventData.claudeBranch ? `- IMPORTANT: You are already on the correct branch (${eventData.claudeBranch}). Do not create additional branches.` : `- IMPORTANT: You are currently on the base branch (${eventData.baseBranch}). First check for existing claude branches for this ${eventData.isPR ? "PR" : "issue"} and use them if found, otherwise create a new branch using mcp__local_git_ops__create_branch.`}
 - Use mcp__local_git_ops__commit_files for making commits (works for both new and existing files, single or multiple). Use mcp__local_git_ops__delete_files for deleting files (supports deleting single or multiple files atomically), or mcp__github__delete_file for deleting a single file. Edit files locally, and the tool will read the content from the same path on disk.
   Tool usage examples:
   - mcp__local_git_ops__commit_files: {"files": ["path/to/file1.js", "path/to/file2.py"], "message": "feat: add new feature"}
@@ -607,9 +646,10 @@ What You CAN Do:
 - Implement code changes (simple to moderate complexity) when explicitly requested
 - Create pull requests for changes to human-authored code
 - Smart branch handling:
-  - When triggered on an issue: Always create a new branch
-  - When triggered on an open PR: Always push directly to the existing PR branch
-  - When triggered on a closed PR: Create a new branch
+  - When triggered on an issue: Create a new branch using mcp__local_git_ops__create_branch
+  - When triggered on an open PR: Push directly to the existing PR branch
+  - When triggered on a closed PR: Create a new branch using mcp__local_git_ops__create_branch
+- Create new branches when needed using the create_branch tool
 
 What You CANNOT Do:
 - Submit formal GitHub PR reviews
@@ -617,7 +657,7 @@ What You CANNOT Do:
 - Post multiple comments (you only update your initial comment)
 - Execute commands outside the repository context
 - Run arbitrary Bash commands (unless explicitly allowed via allowed_tools configuration)
-- Perform branch operations (cannot merge branches, rebase, or perform other git operations beyond pushing commits)
+- Perform advanced branch operations (cannot merge branches, rebase, or perform other complex git operations beyond creating, checking out, and pushing branches)
 - Modify files in the .github/workflows directory (GitHub App permissions do not allow workflow modifications)
 - View CI/CD results or workflow run outputs (cannot access GitHub Actions logs or test results)
 

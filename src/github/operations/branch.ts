@@ -29,6 +29,18 @@ export async function setupBranch(
   const { baseBranch } = context.inputs;
   const isPR = context.isPR;
 
+  // Determine base branch - use baseBranch if provided, otherwise fetch default
+  let sourceBranch: string;
+
+  if (baseBranch) {
+    // Use provided base branch for source
+    sourceBranch = baseBranch;
+  } else {
+    // No base branch provided, fetch the default branch to use as source
+    const repoResponse = await client.api.getRepo(owner, repo);
+    sourceBranch = repoResponse.data.default_branch;
+  }
+
   if (isPR) {
     const prData = githubData.contextData as GitHubPullRequest;
     const prState = prData.state;
@@ -36,9 +48,18 @@ export async function setupBranch(
     // Check if PR is closed or merged
     if (prState === "CLOSED" || prState === "MERGED") {
       console.log(
-        `PR #${entityNumber} is ${prState}, creating new branch from source...`,
+        `PR #${entityNumber} is ${prState}, will let Claude create a new branch when needed`,
       );
-      // Fall through to create a new branch like we do for issues
+
+      // Check out the base branch and let Claude create branches as needed
+      await $`git fetch origin ${sourceBranch}`;
+      await $`git checkout ${sourceBranch}`;
+      await $`git pull origin ${sourceBranch}`;
+
+      return {
+        baseBranch: sourceBranch,
+        currentBranch: sourceBranch,
+      };
     } else {
       // Handle open PR: Checkout the PR branch
       console.log("This is an open PR, checking out PR branch...");
@@ -62,97 +83,54 @@ export async function setupBranch(
     }
   }
 
-  // Determine source branch - use baseBranch if provided, otherwise fetch default
-  let sourceBranch: string;
-
-  if (baseBranch) {
-    // Use provided base branch for source
-    sourceBranch = baseBranch;
-  } else {
-    // No base branch provided, fetch the default branch to use as source
-    const repoResponse = await client.api.getRepo(owner, repo);
-    sourceBranch = repoResponse.data.default_branch;
-  }
-
-  // Creating a new branch for either an issue or closed/merged PR
-  const entityType = isPR ? "pr" : "issue";
+  // For issues, check out the base branch and let Claude create branches as needed
   console.log(
-    `Creating new branch for ${entityType} #${entityNumber} from source branch: ${sourceBranch}...`,
+    `Setting up base branch ${sourceBranch} for issue #${entityNumber}, Claude will create branch when needed...`,
   );
 
-  const timestamp = new Date()
-    .toISOString()
-    .replace(/[:-]/g, "")
-    .replace(/\.\d{3}Z/, "")
-    .split("T")
-    .join("_");
-
-  const newBranch = `claude/${entityType}-${entityNumber}-${timestamp}`;
-
   try {
-    // Use local git operations instead of API since Gitea's API is unreliable
-    console.log(
-      `Setting up local git branch: ${newBranch} from: ${sourceBranch}`,
-    );
-
     // Ensure we're in the repository directory
     const repoDir = process.env.GITHUB_WORKSPACE || process.cwd();
     console.log(`Working in directory: ${repoDir}`);
 
-    try {
-      // Check if we're in a git repository
-      console.log(`Checking if we're in a git repository...`);
-      await $`git status`;
+    // Check if we're in a git repository
+    console.log(`Checking if we're in a git repository...`);
+    await $`git status`;
 
-      // Ensure we have the latest version of the source branch
-      console.log(`Fetching latest ${sourceBranch}...`);
-      await $`git fetch origin ${sourceBranch}`;
+    // Ensure we have the latest version of the source branch
+    console.log(`Fetching latest ${sourceBranch}...`);
+    await $`git fetch origin ${sourceBranch}`;
 
-      // Checkout the source branch
-      console.log(`Checking out ${sourceBranch}...`);
-      await $`git checkout ${sourceBranch}`;
+    // Checkout the source branch
+    console.log(`Checking out ${sourceBranch}...`);
+    await $`git checkout ${sourceBranch}`;
 
-      // Pull latest changes
-      console.log(`Pulling latest changes for ${sourceBranch}...`);
-      await $`git pull origin ${sourceBranch}`;
+    // Pull latest changes
+    console.log(`Pulling latest changes for ${sourceBranch}...`);
+    await $`git pull origin ${sourceBranch}`;
 
-      // Create and checkout the new branch
-      console.log(`Creating new branch: ${newBranch}`);
-      await $`git checkout -b ${newBranch}`;
+    // Verify the branch was checked out
+    const currentBranch = await $`git branch --show-current`;
+    const branchName = currentBranch.text().trim();
+    console.log(`Current branch: ${branchName}`);
 
-      // Verify the branch was created
-      const currentBranch = await $`git branch --show-current`;
-      const branchName = currentBranch.text().trim();
-      console.log(`Current branch after creation: ${branchName}`);
-
-      if (branchName === newBranch) {
-        console.log(
-          `✅ Successfully created and checked out branch: ${newBranch}`,
-        );
-      } else {
-        throw new Error(
-          `Branch creation failed. Expected ${newBranch}, got ${branchName}`,
-        );
-      }
-    } catch (gitError: any) {
-      console.error(`❌ Git operations failed:`, gitError);
-      console.error(`Error message: ${gitError.message || gitError}`);
-
-      // This is a critical failure - the branch MUST be created for Claude to work
+    if (branchName === sourceBranch) {
+      console.log(`✅ Successfully checked out base branch: ${sourceBranch}`);
+    } else {
       throw new Error(
-        `Failed to create branch ${newBranch}: ${gitError.message || gitError}`,
+        `Branch checkout failed. Expected ${sourceBranch}, got ${branchName}`,
       );
     }
 
-    console.log(`Branch setup completed for: ${newBranch}`);
+    console.log(
+      `Branch setup completed, ready for Claude to create branches as needed`,
+    );
 
     // Set outputs for GitHub Actions
-    core.setOutput("CLAUDE_BRANCH", newBranch);
     core.setOutput("BASE_BRANCH", sourceBranch);
     return {
       baseBranch: sourceBranch,
-      claudeBranch: newBranch,
-      currentBranch: newBranch,
+      currentBranch: sourceBranch,
     };
   } catch (error) {
     console.error("Error setting up branch:", error);
