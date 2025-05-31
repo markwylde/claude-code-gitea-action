@@ -69,6 +69,7 @@ When adding new MCP tools:
 ## Feature Development Reminders
 
 When implementing new features that add action inputs, configuration options, or capabilities:
+
 1. Always update README.md to document new inputs in the inputs table
 2. Update example workflows to show how new inputs can be used
 3. Add appropriate defaults and descriptions to action.yml
