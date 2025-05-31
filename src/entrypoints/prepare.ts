@@ -18,17 +18,27 @@ import { createPrompt } from "../create-prompt";
 import { createClient } from "../github/api/client";
 import { fetchGitHubData } from "../github/data/fetcher";
 import { parseGitHubContext } from "../github/context";
+import { setupOAuthCredentials } from "../claude/oauth-setup";
 
 async function run() {
   try {
-    // Step 1: Setup GitHub token
+    // Step 1: Setup OAuth credentials if provided
+    const claudeCredentials = process.env.CLAUDE_CREDENTIALS;
+    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    
+    if (claudeCredentials && anthropicApiKey === "use-oauth") {
+      await setupOAuthCredentials(claudeCredentials);
+      console.log("OAuth credentials configured for Claude AI Max subscription");
+    }
+
+    // Step 2: Setup GitHub token
     const githubToken = await setupGitHubToken();
     const client = createClient(githubToken);
 
-    // Step 2: Parse GitHub context (once for all operations)
+    // Step 3: Parse GitHub context (once for all operations)
     const context = parseGitHubContext();
 
-    // Step 3: Check write permissions
+    // Step 4: Check write permissions
     const hasWritePermissions = await checkWritePermissions(
       client.api,
       context,
@@ -39,7 +49,7 @@ async function run() {
       );
     }
 
-    // Step 4: Check trigger conditions
+    // Step 5: Check trigger conditions
     const containsTrigger = await checkTriggerAction(context);
 
     // Set outputs that are always needed
@@ -51,14 +61,14 @@ async function run() {
       return;
     }
 
-    // Step 5: Check if actor is human
+    // Step 6: Check if actor is human
     await checkHumanActor(client.api, context);
 
-    // Step 6: Create initial tracking comment
+    // Step 7: Create initial tracking comment
     const commentId = await createInitialComment(client.api, context);
     core.setOutput("claude_comment_id", commentId.toString());
 
-    // Step 7: Fetch GitHub data (once for both branch setup and prompt creation)
+    // Step 8: Fetch GitHub data (once for both branch setup and prompt creation)
     const githubData = await fetchGitHubData({
       client: client,
       repository: `${context.repository.owner}/${context.repository.repo}`,
@@ -66,14 +76,14 @@ async function run() {
       isPR: context.isPR,
     });
 
-    // Step 8: Setup branch
+    // Step 9: Setup branch
     const branchInfo = await setupBranch(client, githubData, context);
     core.setOutput("BASE_BRANCH", branchInfo.baseBranch);
     if (branchInfo.claudeBranch) {
       core.setOutput("CLAUDE_BRANCH", branchInfo.claudeBranch);
     }
 
-    // Step 9: Update initial comment with branch link (only if a claude branch was created)
+    // Step 10: Update initial comment with branch link (only if a claude branch was created)
     if (branchInfo.claudeBranch) {
       await updateTrackingComment(
         client,
@@ -83,7 +93,7 @@ async function run() {
       );
     }
 
-    // Step 10: Create prompt file
+    // Step 11: Create prompt file
     await createPrompt(
       commentId,
       branchInfo.baseBranch,
@@ -92,7 +102,7 @@ async function run() {
       context,
     );
 
-    // Step 11: Get MCP configuration
+    // Step 12: Get MCP configuration
     const mcpConfig = await prepareMcpConfig(
       githubToken,
       context.repository.owner,

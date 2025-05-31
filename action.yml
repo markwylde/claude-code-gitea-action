@@ -42,7 +42,10 @@ inputs:
 
   # Auth configuration
   anthropic_api_key:
-    description: "Anthropic API key (required for direct API, not needed for Bedrock/Vertex)"
+    description: "Anthropic API key (required for direct API, not needed for Bedrock/Vertex). Set to 'use-oauth' when using claude_credentials"
+    required: false
+  claude_credentials:
+    description: "Claude OAuth credentials JSON for Claude AI Max subscription authentication"
     required: false
   gitea_token:
     description: "Gitea token with repo and pull request permissions (defaults to GITHUB_TOKEN)"
@@ -96,6 +99,8 @@ runs:
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_RUN_ID: ${{ github.run_id }}
         GITEA_API_URL: ${{ env.GITHUB_SERVER_URL }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        CLAUDE_CREDENTIALS: ${{ inputs.claude_credentials }}
 
     - name: Run Claude Code
       id: claude-code
@@ -123,6 +128,7 @@ runs:
         USE_BEDROCK: ${{ inputs.use_bedrock }}
         USE_VERTEX: ${{ inputs.use_vertex }}
         ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        CLAUDE_CREDENTIALS: ${{ inputs.claude_credentials }}
 
         # GitHub token for repository access
         GITHUB_TOKEN: ${{ steps.prepare.outputs.GITHUB_TOKEN }}
