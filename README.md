@@ -70,7 +70,8 @@ jobs:
 
 | Input                 | Description                                                                                                         | Required | Default   |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------- | -------- | --------- |
-| `anthropic_api_key`   | Anthropic API key (required for direct API, not needed for Bedrock/Vertex)                                          | No\*     | -         |
+| `anthropic_api_key`   | Anthropic API key (required for direct API, not needed for Bedrock/Vertex). Set to 'use-oauth' when using claude_credentials | No\*     | -         |
+| `claude_credentials`  | Claude OAuth credentials JSON for Claude AI Max subscription authentication                                         | No       | -         |
 | `direct_prompt`       | Direct prompt for Claude to execute automatically without needing a trigger (for automated workflows)               | No       | -         |
 | `timeout_minutes`     | Timeout in minutes for execution                                                                                    | No       | `30`      |
 | `gitea_token`         | Gitea token for Claude to operate with. **Only include this if you're connecting a custom GitHub app of your own!** | No       | -         |
@@ -87,6 +88,31 @@ jobs:
 \*Required when using direct Anthropic API (default and when not using Bedrock or Vertex)
 
 > **Note**: This action is currently in beta. Features and APIs may change as we continue to improve the integration.
+
+## Claude Max Authentication
+
+This action supports authentication using Claude Max OAuth credentials. This allows users with Claude Max subscriptions to use their existing authentication.
+
+### Setup
+
+1. **Get OAuth Credentials**: Use Claude Code to generate OAuth credentials:
+   ```
+   /auth-setup
+   ```
+
+2. **Add Credentials to Repository**: Add the generated JSON credentials as a repository secret named `CLAUDE_CREDENTIALS`.
+
+3. **Configure Workflow**: Set up your workflow to use OAuth authentication:
+
+```yaml
+- uses: anthropics/claude-code-action@beta
+  with:
+    anthropic_api_key: 'use-oauth'
+    claude_credentials: ${{ secrets.CLAUDE_CREDENTIALS }}
+    gitea_token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+When `anthropic_api_key` is set to `'use-oauth'`, the action will use the OAuth credentials provided in `claude_credentials` instead of a direct API key.
 
 ## Gitea Configuration
 
