@@ -568,7 +568,7 @@ ${
       - Commit changes using mcp__local_git_ops__commit_files to the existing branch (works for both new and existing files).
       - Use mcp__local_git_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
       - CRITICAL: After committing, you MUST push the branch to the remote repository using mcp__local_git_ops__push_branch
-      - After pushing, you should normally create a PR using mcp__local_git_ops__create_pull_request, unless it already exists.
+      - After pushing, you MUST create a PR using mcp__local_git_ops__create_pull_request.
       - When pushing changes with this tool and TRIGGER_USERNAME is not "Unknown", include a "Co-authored-by: ${context.triggerUsername} <${context.triggerUsername}@users.noreply.local>" line in the commit message.`
           : eventData.claudeBranch
             ? `
@@ -590,19 +590,8 @@ ${
       - After being on the correct branch (existing or new), commit changes using mcp__local_git_ops__commit_files (works for both new and existing files)
       - Use mcp__local_git_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
       - CRITICAL: After committing, you MUST push the branch to the remote repository using mcp__local_git_ops__push_branch
+      - After pushing, you should create a PR using mcp__local_git_ops__create_pull_request unless one already exists for that branch.
       - When pushing changes and TRIGGER_USERNAME is not "Unknown", include a "Co-authored-by: ${context.triggerUsername} <${context.triggerUsername}@users.noreply.local>" line in the commit message.
-      - Provide a URL to create a PR manually in this format:
-        [Create a PR](${GITEA_SERVER_URL}/${context.repository}/compare/${eventData.baseBranch}...<branch-name>?quick_pull=1&title=<url-encoded-title>&body=<url-encoded-body>)
-        - IMPORTANT: Use THREE dots (...) between branch names, not two (..)
-          Example: ${GITEA_SERVER_URL}/${context.repository}/compare/main...feature-branch (correct)
-          NOT: ${GITEA_SERVER_URL}/${context.repository}/compare/main..feature-branch (incorrect)
-        - IMPORTANT: Ensure all URL parameters are properly encoded - spaces should be encoded as %20, not left as spaces
-          Example: Instead of "fix: update welcome message", use "fix%3A%20update%20welcome%20message"
-        - The target-branch should be '${eventData.baseBranch}'.
-        - The branch-name is your created branch name
-        - The body should include:
-          - A clear description of the changes
-          - Reference to the original ${eventData.isPR ? "PR" : "issue"}
       }
 
    C. For Complex Changes:
@@ -619,7 +608,7 @@ ${!eventData.isPR || !eventData.claudeBranch ? `6. Final Update:` : `5. Final Up
    - When all todos are completed, remove the spinner and add a brief summary of what was accomplished, and what was not done.
    - Note: If you see previous Claude comments with headers like "**Claude finished @user's task**" followed by "---", do not include this in your comment. The system adds this automatically.
    - If you changed any files locally, you must commit them using mcp__local_git_ops__commit_files AND push the branch using mcp__local_git_ops__push_branch before saying that you're done.
-   ${!eventData.isPR || !eventData.claudeBranch ? `- If you created a branch and made changes, your comment must include the PR URL with prefilled title and body mentioned above.` : ""}
+   ${!eventData.isPR || !eventData.claudeBranch ? `- If you created a branch and made changes, you must create a PR using mcp__local_git_ops__create_pull_request.` : ""}
 
 Important Notes:
 - All communication must happen through Gitea PR comments.
