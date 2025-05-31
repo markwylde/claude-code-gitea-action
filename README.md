@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: markwylde/claude-code-gitea-action@45ee2dca55c6082b67de2b5ab5a1e78fcc409eae
+      - uses: markwylde/claude-code-gitea-action@v1.0.0
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITEA_TOKEN }}
