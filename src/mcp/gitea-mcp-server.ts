@@ -213,13 +213,15 @@ server.tool(
   "update_issue_comment",
   "Update an existing issue comment",
   {
-    comment_id: z.number().describe("The comment ID to update"),
+    owner: z.string().describe("Repository owner"),
+    repo: z.string().describe("Repository name"),
+    commentId: z.number().describe("The comment ID to update"),
     body: z.string().describe("The new comment body content"),
   },
-  async ({ comment_id, body }) => {
+  async ({ owner, repo, commentId, body }) => {
     try {
       const comment = await giteaRequest(
-        `/api/v1/repos/${REPO_OWNER}/${REPO_NAME}/issues/comments/${comment_id}`,
+        `/api/v1/repos/${owner}/${repo}/issues/comments/${commentId}`,
         "PATCH",
         { body },
       );
@@ -1146,6 +1148,110 @@ server.tool(
           {
             type: "text",
             text: `Error getting branch: ${errorMessage}`,
+          },
+        ],
+        error: errorMessage,
+        isError: true,
+      };
+    }
+  },
+);
+
+// Update pull request comment
+server.tool(
+  "update_pull_request_comment",
+  "Update a pull request review comment",
+  {
+    owner: z.string().describe("Repository owner"),
+    repo: z.string().describe("Repository name"),
+    commentId: z.number().describe("The comment ID to update"),
+    body: z.string().describe("The new comment body content"),
+  },
+  async ({ owner, repo, commentId, body }) => {
+    try {
+      const comment = await giteaRequest(
+        `/api/v1/repos/${owner}/${repo}/pulls/comments/${commentId}`,
+        "PATCH",
+        { body },
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(comment, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(
+        `[GITEA-MCP] Error updating pull request comment: ${errorMessage}`,
+      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error updating pull request comment: ${errorMessage}`,
+          },
+        ],
+        error: errorMessage,
+        isError: true,
+      };
+    }
+  },
+);
+
+// Delete a file from repository
+server.tool(
+  "delete_file",
+  "Delete a file from the repository",
+  {
+    owner: z.string().describe("Repository owner"),
+    repo: z.string().describe("Repository name"),
+    filepath: z.string().describe("Path to the file to delete"),
+    message: z.string().describe("Commit message for the deletion"),
+    branch: z
+      .string()
+      .optional()
+      .describe("Branch to delete from (defaults to default branch)"),
+    sha: z.string().describe("SHA of the file to delete"),
+  },
+  async ({ owner, repo, filepath, message, branch, sha }) => {
+    try {
+      const deleteData: any = {
+        message,
+        sha,
+      };
+
+      if (branch) {
+        deleteData.branch = branch;
+      }
+
+      const result = await giteaRequest(
+        `/api/v1/repos/${owner}/${repo}/contents/${encodeURIComponent(filepath)}`,
+        "DELETE",
+        deleteData,
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(`[GITEA-MCP] Error deleting file: ${errorMessage}`);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error deleting file: ${errorMessage}`,
           },
         ],
         error: errorMessage,

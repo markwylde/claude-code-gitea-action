@@ -23,7 +23,7 @@ export async function prepareMcpConfig(
   try {
     const mcpConfig = {
       mcpServers: {
-        github: {
+        gitea: {
           command: "bun",
           args: [
             "run",
