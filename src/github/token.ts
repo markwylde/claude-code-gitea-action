@@ -23,11 +23,11 @@ export async function setupGitHubToken(): Promise<string> {
     }
 
     throw new Error(
-      "No GitHub token available. Please provide a github_token input or ensure GITHUB_TOKEN is available in the workflow environment.",
+      "No GitHub token available. Please provide a gitea_token input or ensure GITHUB_TOKEN is available in the workflow environment.",
     );
   } catch (error) {
     core.setFailed(
-      `Failed to setup GitHub token: ${error}.\n\nPlease provide a \`github_token\` in the \`with\` section of the action in your workflow yml file, or ensure the workflow has access to the default GITHUB_TOKEN.`,
+      `Failed to setup GitHub token: ${error}.\n\nPlease provide a \`gitea_token\` in the \`with\` section of the action in your workflow yml file, or ensure the workflow has access to the default GITHUB_TOKEN.`,
     );
     process.exit(1);
   }

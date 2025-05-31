@@ -22,7 +22,7 @@ permissions:
   id-token: write # Required for OIDC authentication
 ```
 
-The OIDC token is required in order for the Claude GitHub app to function. If you wish to not use the GitHub app, you can instead provide a `github_token` input to the action for Claude to operate with. See the [Claude Code permissions documentation][perms] for more.
+The OIDC token is required in order for the Claude GitHub app to function. If you wish to not use the GitHub app, you can instead provide a `gitea_token` input to the action for Claude to operate with. See the [Claude Code permissions documentation][perms] for more.
 
 ## Claude's Capabilities and Limitations
 

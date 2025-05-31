@@ -56,7 +56,7 @@ Now required to explicitly provide a GitHub token:
 # After (required)
 - uses: anthropics/claude-code-action@beta
   with:
-    github_token: ${{ secrets.GITHUB_TOKEN }}
+    gitea_token: ${{ secrets.GITHUB_TOKEN }}
     anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
@@ -94,7 +94,7 @@ jobs:
       - name: Run Claude Assistant
         uses: ./ # Adjust path as needed for your Gitea setup
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          gitea_token: ${{ secrets.GITHUB_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
