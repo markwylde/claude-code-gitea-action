@@ -584,7 +584,16 @@ Important Notes:
 - Never create new comments. Only update the existing comment using ${eventData.eventName === "pull_request_review_comment" ? "mcp__github__update_pull_request_comment" : "mcp__github__update_issue_comment"} with comment_id: ${context.claudeCommentId}.
 - This includes ALL responses: code reviews, answers to questions, progress updates, and final results.${eventData.isPR ? "\n- PR CRITICAL: After reading files and forming your response, you MUST post it by calling mcp__github__update_issue_comment. Do NOT just respond with a normal response, the user will not see it." : ""}
 - You communicate exclusively by editing your single comment - not through any other means.
-- Use this spinner HTML when work is in progress: <img src="data:image/gif;base64,R0lGODlhEAAQAPIAAP///wAAAMLCwkJCQgAAAGJiYoKCgpKSkiH/C05FVFNDQVBFMi4wAwEAAAAh/hpDcmVhdGVkIHdpdGggYWpheGxvYWQuaW5mbwAh+QQJCgAAACwAAAAAEAAQAAADMwi63P4wyklrE2MIOggZnAdOmGYJRbExwroUmcG2LmDEwnHQLVsYOd2mBzkYDAdKa+dIAAAh+QQJCgAAACwAAAAAEAAQAAADNAi63P5OjCEgG4QMu7DmikRxQlFUYDEZIGBMRVsaqHwctXXf7WEYB4Ag1xjihkMZsiUkKhIAIfkECQoAAAAsAAAAABAAEAAAAzYIujIjK8pByJDMlFYvBoVjHA70GU7xSUJhmKtwHPAKzLO9HMaoKwJZ7Rf8AYPDDzKpZBqfvwQAIfkECQoAAAAsAAAAABAAEAAAAzMIumIlK8oyhpHsnFZfhYumCYUhDAQxRIdhHBGqRoKw0R8DYlJd8z0fMDgsGo/IpHI5TAAAIfkECQoAAAAsAAAAABAAEAAAAzIIunInK0rnZBTwGPNMgQwmdsNgXGJUlIWEuR5oWUIpz8pAEAMe6TwfwyYsGo/IpFKSAAAh+QQJCgAAACwAAAAAEAAQAAADMwi6IMKQORfjdOe82p4wGccc4CEuQradylesojEMBgsUc2G7sDX3lQGBMLAJibufbSlKAAAh+QQJCgAAACwAAAAAEAAQAAADMgi63P7wjRLKLkHZx6EaNgeFJBAC7F9YoI5FqYZEtfkGdVBNMAKg3DiC0Kx/BqFgBAA7" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />
+- Use this spinner HTML when work is in progress: ${(() => {
+  try {
+    const spinnerPath = require("path").join(__dirname, "../assets/spinner.gif");
+    const spinnerBuffer = require("fs").readFileSync(spinnerPath);
+    const base64Data = spinnerBuffer.toString("base64");
+    return `<img src="data:image/gif;base64,${base64Data}" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />`;
+  } catch (error) {
+    return '<span style="margin-left: 4px;">⏳</span>';
+  }
+})()}
 ${eventData.isPR && !eventData.claudeBranch ? `- Always push to the existing branch when triggered on a PR.` : `- IMPORTANT: You are already on the correct branch (${eventData.claudeBranch || "the created branch"}). Never create new branches when triggered on issues or closed/merged PRs.`}
 - Use mcp__local_git_ops__commit_files for making commits (works for both new and existing files, single or multiple). Use mcp__local_git_ops__delete_files for deleting files (supports deleting single or multiple files atomically), or mcp__github__delete_file for deleting a single file. Edit files locally, and the tool will read the content from the same path on disk.
   Tool usage examples:
