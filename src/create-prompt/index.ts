@@ -33,6 +33,7 @@ const BASE_ALLOWED_TOOLS = [
   "mcp__local_git_ops__delete_files",
   "mcp__local_git_ops__push_branch",
   "mcp__local_git_ops__create_pull_request",
+  "mcp__local_git_ops__checkout_branch",
   "mcp__local_git_ops__git_status",
 ];
 const DISALLOWED_TOOLS = ["WebSearch", "WebFetch"];
