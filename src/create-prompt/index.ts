@@ -568,6 +568,7 @@ ${
       - Commit changes using mcp__local_git_ops__commit_files to the existing branch (works for both new and existing files).
       - Use mcp__local_git_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
       - CRITICAL: After committing, you MUST push the branch to the remote repository using mcp__local_git_ops__push_branch
+      - After pushing, you should normally create a PR using mcp__local_git_ops__create_pull_request, unless it already exists.
       - When pushing changes with this tool and TRIGGER_USERNAME is not "Unknown", include a "Co-authored-by: ${context.triggerUsername} <${context.triggerUsername}@users.noreply.local>" line in the commit message.`
           : eventData.claudeBranch
             ? `
