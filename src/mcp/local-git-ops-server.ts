@@ -136,11 +136,15 @@ server.tool(
     create_if_missing: z
       .boolean()
       .optional()
-      .describe("Create branch if it doesn't exist locally (defaults to false)"),
+      .describe(
+        "Create branch if it doesn't exist locally (defaults to false)",
+      ),
     fetch_remote: z
       .boolean()
       .optional()
-      .describe("Fetch from remote if branch doesn't exist locally (defaults to true)"),
+      .describe(
+        "Fetch from remote if branch doesn't exist locally (defaults to true)",
+      ),
   },
   async ({ branch_name, create_if_missing = false, fetch_remote = true }) => {
     try {
@@ -150,17 +154,23 @@ server.tool(
         runGitCommand(`git rev-parse --verify ${branch_name}`);
         branchExists = true;
       } catch (error) {
-        console.log(`[LOCAL-GIT-MCP] Branch ${branch_name} doesn't exist locally`);
+        console.log(
+          `[LOCAL-GIT-MCP] Branch ${branch_name} doesn't exist locally`,
+        );
       }
 
       // If branch doesn't exist locally, try to fetch from remote
       if (!branchExists && fetch_remote) {
         try {
-          console.log(`[LOCAL-GIT-MCP] Attempting to fetch ${branch_name} from remote`);
+          console.log(
+            `[LOCAL-GIT-MCP] Attempting to fetch ${branch_name} from remote`,
+          );
           runGitCommand(`git fetch origin ${branch_name}:${branch_name}`);
           branchExists = true;
         } catch (error) {
-          console.log(`[LOCAL-GIT-MCP] Branch ${branch_name} doesn't exist on remote`);
+          console.log(
+            `[LOCAL-GIT-MCP] Branch ${branch_name} doesn't exist on remote`,
+          );
         }
       }
 
@@ -180,7 +190,9 @@ server.tool(
 
       // If branch doesn't exist and we can't/won't create it, throw error
       if (!branchExists) {
-        throw new Error(`Branch '${branch_name}' does not exist locally or on remote. Use create_if_missing=true to create it.`);
+        throw new Error(
+          `Branch '${branch_name}' does not exist locally or on remote. Use create_if_missing=true to create it.`,
+        );
       }
 
       // Checkout the existing branch
