@@ -34,7 +34,7 @@ type IssueCommentEvent = {
   issueNumber: string;
   isPR: false;
   baseBranch: string;
-  claudeBranch: string;
+  claudeBranch?: string;
   commentBody: string;
 };
 
@@ -55,7 +55,7 @@ type IssueOpenedEvent = {
   isPR: false;
   issueNumber: string;
   baseBranch: string;
-  claudeBranch: string;
+  claudeBranch?: string;
 };
 
 type IssueAssignedEvent = {
@@ -64,7 +64,7 @@ type IssueAssignedEvent = {
   isPR: false;
   issueNumber: string;
   baseBranch: string;
-  claudeBranch: string;
+  claudeBranch?: string;
   assigneeTrigger: string;
 };
 

@@ -219,8 +219,6 @@ export function prepareContext(
           ...(baseBranch && { baseBranch }),
         };
         break;
-      } else if (!claudeBranch) {
-        throw new Error("CLAUDE_BRANCH is required for issue_comment event");
       } else if (!baseBranch) {
         throw new Error("BASE_BRANCH is required for issue_comment event");
       } else if (!issueNumber) {
@@ -233,10 +231,10 @@ export function prepareContext(
         eventName: "issue_comment",
         commentId,
         isPR: false,
-        claudeBranch: claudeBranch,
         baseBranch,
         issueNumber,
         commentBody,
+        ...(claudeBranch && { claudeBranch }),
       };
       break;
 
@@ -253,9 +251,6 @@ export function prepareContext(
       if (!baseBranch) {
         throw new Error("BASE_BRANCH is required for issues event");
       }
-      if (!claudeBranch) {
-        throw new Error("CLAUDE_BRANCH is required for issues event");
-      }
 
       if (eventAction === "assigned") {
         if (!assigneeTrigger) {
@@ -269,8 +264,8 @@ export function prepareContext(
           isPR: false,
           issueNumber,
           baseBranch,
-          claudeBranch,
           assigneeTrigger,
+          ...(claudeBranch && { claudeBranch }),
         };
       } else if (eventAction === "opened") {
         eventData = {
@@ -279,7 +274,7 @@ export function prepareContext(
           isPR: false,
           issueNumber,
           baseBranch,
-          claudeBranch,
+          ...(claudeBranch && { claudeBranch }),
         };
       } else {
         throw new Error(`Unsupported issue action: ${eventAction}`);

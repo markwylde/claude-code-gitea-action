@@ -317,7 +317,7 @@ describe("generatePrompt", () => {
 
     expect(prompt).toContain("<trigger_username>johndoe</trigger_username>");
     expect(prompt).toContain(
-      "Co-authored-by: johndoe <johndoe@users.noreply.github.com>",
+      "Co-authored-by: johndoe <johndoe@users.noreply.local>",
     );
   });
 
@@ -338,7 +338,7 @@ describe("generatePrompt", () => {
 
     // Should contain PR-specific instructions
     expect(prompt).toContain(
-      "Push directly using mcp__github_file_ops__commit_files to the existing branch",
+      "Commit changes using mcp__local_git_ops__commit_files to the existing branch",
     );
     expect(prompt).toContain(
       "Always push to the existing branch when triggered on a PR",
@@ -378,12 +378,12 @@ describe("generatePrompt", () => {
     );
     expect(prompt).toContain("Create a PR](https://github.com/");
     expect(prompt).toContain(
-      "If you created anything in your branch, your comment must include the PR URL",
+      "If you created a branch and made changes, your comment must include the PR URL",
     );
 
     // Should NOT contain PR-specific instructions
     expect(prompt).not.toContain(
-      "Push directly using mcp__github_file_ops__commit_files to the existing branch",
+      "Commit changes using mcp__local_git_ops__commit_files to the existing branch",
     );
     expect(prompt).not.toContain(
       "Always push to the existing branch when triggered on a PR",
@@ -449,13 +449,10 @@ describe("generatePrompt", () => {
       "The branch-name is the current branch: claude/pr-456-20240101_120000",
     );
     expect(prompt).toContain("Reference to the original PR");
-    expect(prompt).toContain(
-      "If you created anything in your branch, your comment must include the PR URL",
-    );
 
     // Should NOT contain open PR instructions
     expect(prompt).not.toContain(
-      "Push directly using mcp__github_file_ops__commit_files to the existing branch",
+      "Commit changes using mcp__local_git_ops__commit_files to the existing branch",
     );
   });
 
@@ -478,7 +475,7 @@ describe("generatePrompt", () => {
 
     // Should contain open PR instructions
     expect(prompt).toContain(
-      "Push directly using mcp__github_file_ops__commit_files to the existing branch",
+      "Commit changes using mcp__local_git_ops__commit_files to the existing branch",
     );
     expect(prompt).toContain(
       "Always push to the existing branch when triggered on a PR",
@@ -543,9 +540,6 @@ describe("generatePrompt", () => {
     );
     expect(prompt).toContain("Create a PR](https://github.com/");
     expect(prompt).toContain("Reference to the original PR");
-    expect(prompt).toContain(
-      "If you created anything in your branch, your comment must include the PR URL",
-    );
   });
 
   test("should handle pull_request event on closed PR with new branch", () => {
@@ -638,8 +632,8 @@ describe("buildAllowedToolsString", () => {
     expect(result).toContain("Write");
     expect(result).toContain("mcp__github__update_issue_comment");
     expect(result).not.toContain("mcp__github__update_pull_request_comment");
-    expect(result).toContain("mcp__github_file_ops__commit_files");
-    expect(result).toContain("mcp__github_file_ops__delete_files");
+    expect(result).toContain("mcp__local_git_ops__commit_files");
+    expect(result).toContain("mcp__local_git_ops__delete_files");
   });
 
   test("should return PR comment tool for inline review comments", () => {
@@ -662,8 +656,8 @@ describe("buildAllowedToolsString", () => {
     expect(result).toContain("Write");
     expect(result).not.toContain("mcp__github__update_issue_comment");
     expect(result).toContain("mcp__github__update_pull_request_comment");
-    expect(result).toContain("mcp__github_file_ops__commit_files");
-    expect(result).toContain("mcp__github_file_ops__delete_files");
+    expect(result).toContain("mcp__local_git_ops__commit_files");
+    expect(result).toContain("mcp__local_git_ops__delete_files");
   });
 
   test("should append custom tools when provided", () => {
