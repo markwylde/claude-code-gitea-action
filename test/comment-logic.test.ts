@@ -105,7 +105,7 @@ describe("updateCommentBody", () => {
 
       const result = updateCommentBody(input);
       expect(result).toContain(
-        "• [`claude/issue-123-20240101_120000`](https://github.com/owner/repo/tree/claude/issue-123-20240101_120000)",
+        "• [`claude/issue-123-20240101_120000`](https://github.com/owner/repo/src/branch/claude/issue-123-20240101_120000)",
       );
     });
 
@@ -113,12 +113,12 @@ describe("updateCommentBody", () => {
       const input = {
         ...baseInput,
         branchLink:
-          "\n[View branch](https://github.com/owner/repo/tree/branch-name)",
+          "\n[View branch](https://github.com/owner/repo/src/branch/branch-name)",
       };
 
       const result = updateCommentBody(input);
       expect(result).toContain(
-        "• [`branch-name`](https://github.com/owner/repo/tree/branch-name)",
+        "• [`branch-name`](https://github.com/owner/repo/src/branch/branch-name)",
       );
     });
 
@@ -126,13 +126,13 @@ describe("updateCommentBody", () => {
       const input = {
         ...baseInput,
         currentBody:
-          "Some comment with [View branch](https://github.com/owner/repo/tree/branch-name)",
+          "Some comment with [View branch](https://github.com/owner/repo/src/branch/branch-name)",
         branchName: "new-branch-name",
       };
 
       const result = updateCommentBody(input);
       expect(result).toContain(
-        "• [`new-branch-name`](https://github.com/owner/repo/tree/new-branch-name)",
+        "• [`new-branch-name`](https://github.com/owner/repo/src/branch/new-branch-name)",
       );
       expect(result).not.toContain("View branch");
     });
@@ -333,7 +333,7 @@ describe("updateCommentBody", () => {
       );
       expect(result).toContain("—— [View job]");
       expect(result).toContain(
-        "• [`claude-branch-123`](https://github.com/owner/repo/tree/claude-branch-123)",
+        "• [`claude-branch-123`](https://github.com/owner/repo/src/branch/claude-branch-123)",
       );
       expect(result).toContain("• [Create PR ➔]");
 
@@ -402,7 +402,7 @@ describe("updateCommentBody", () => {
         currentBody: "Claude Code is working…",
         branchName: "claude/issue-123-20240101_120000",
         branchLink:
-          "\n[View branch](https://github.com/owner/repo/tree/claude/issue-123-20240101_120000)",
+          "\n[View branch](https://github.com/owner/repo/src/branch/claude/issue-123-20240101_120000)",
         prLink:
           "\n[Create a PR](https://github.com/owner/repo/compare/main...claude/issue-123-20240101_120000)",
       };
@@ -411,7 +411,7 @@ describe("updateCommentBody", () => {
 
       // Should include both links in formatted style
       expect(result).toContain(
-        "• [`claude/issue-123-20240101_120000`](https://github.com/owner/repo/tree/claude/issue-123-20240101_120000)",
+        "• [`claude/issue-123-20240101_120000`](https://github.com/owner/repo/src/branch/claude/issue-123-20240101_120000)",
       );
       expect(result).toContain(
         "• [Create PR ➔](https://github.com/owner/repo/compare/main...claude/issue-123-20240101_120000)",

@@ -160,7 +160,7 @@ export function updateCommentBody(input: CommentUpdateInput): string {
       // Extract owner/repo from jobUrl
       const repoMatch = jobUrl.match(/github\.com\/([^\/]+)\/([^\/]+)\//);
       if (repoMatch) {
-        branchUrl = `${GITEA_SERVER_URL}/${repoMatch[1]}/${repoMatch[2]}/tree/${finalBranchName}`;
+        branchUrl = `${GITEA_SERVER_URL}/${repoMatch[1]}/${repoMatch[2]}/src/branch/${finalBranchName}`;
       }
     }
 

@@ -1,8 +1,8 @@
-![Claude Code Action responding to a comment](https://github.com/user-attachments/assets/1d60c2e9-82ed-4ee5-b749-f9e021c85f4d)
+# Claude Code Action (Gitea Fork)
 
-# Claude Code Action
+A fork of the [Claude Code Action](https://github.com/anthropics/claude-code-action) that adds support for Gitea alongside GitHub. This action provides a general-purpose [Claude Code](https://claude.ai/code) assistant for PRs and issues that can answer questions and implement code changes. It listens for a trigger phrase in comments and activates Claude to act on the request. Supports multiple authentication methods including Anthropic direct API, Amazon Bedrock, and Google Vertex AI.
 
-A general-purpose [Claude Code](https://claude.ai/code) action for GitHub PRs and issues that can answer questions and implement code changes. This action listens for a trigger phrase in comments and activates Claude act on the request. It supports multiple authentication methods including Anthropic direct API, Amazon Bedrock, and Google Vertex AI.
+> **Note**: This is an unofficial fork that extends the original action to work with Gitea installations. The core functionality remains the same, with additional support for Gitea APIs and local git operations.
 
 ## Features
 

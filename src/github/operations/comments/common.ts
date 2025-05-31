@@ -3,16 +3,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 
 function getSpinnerHtml(): string {
-  try {
-    const spinnerPath = join(__dirname, "../../../assets/spinner.gif");
-    const spinnerBuffer = readFileSync(spinnerPath);
-    const base64Data = spinnerBuffer.toString("base64");
-    return `<img src="data:image/gif;base64,${base64Data}" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />`;
-  } catch (error) {
-    console.warn("Could not load spinner image, using fallback");
-    // Fallback to a simple text spinner
-    return '<span style="margin-left: 4px;">⏳</span>';
-  }
+  return `<img src="https://raw.githubusercontent.com/markwylde/claude-code-gitea-action/refs/heads/gitea/assets/spinner.gif" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />`;
 }
 
 export const SPINNER_HTML = getSpinnerHtml();

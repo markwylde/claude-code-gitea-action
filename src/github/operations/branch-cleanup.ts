@@ -46,7 +46,7 @@ export async function checkAndDeleteEmptyBranch(
             console.log(
               `Branch ${claudeBranch} appears to have commits (different SHA from base)`,
             );
-            const branchUrl = `${GITEA_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
+            const branchUrl = `${GITEA_SERVER_URL}/${owner}/${repo}/src/branch/${claudeBranch}`;
             branchLink = `\n[View branch](${branchUrl})`;
           } else {
             console.log(
@@ -63,7 +63,7 @@ export async function checkAndDeleteEmptyBranch(
             console.log(
               `Branch ${claudeBranch} exists but SHA comparison failed, assuming it has commits`,
             );
-            const branchUrl = `${GITEA_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
+            const branchUrl = `${GITEA_SERVER_URL}/${owner}/${repo}/src/branch/${claudeBranch}`;
             branchLink = `\n[View branch](${branchUrl})`;
           } else {
             console.log(
@@ -76,7 +76,7 @@ export async function checkAndDeleteEmptyBranch(
         console.error("Error checking branch with git commands:", error);
         // For errors, assume the branch has commits to be safe
         console.log("Assuming branch exists due to git command error");
-        const branchUrl = `${GITEA_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
+        const branchUrl = `${GITEA_SERVER_URL}/${owner}/${repo}/src/branch/${claudeBranch}`;
         branchLink = `\n[View branch](${branchUrl})`;
       }
     } else {
@@ -106,7 +106,7 @@ export async function checkAndDeleteEmptyBranch(
           console.log(
             `Branch ${claudeBranch} appears to have commits (different SHA from base)`,
           );
-          const branchUrl = `${GITEA_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
+          const branchUrl = `${GITEA_SERVER_URL}/${owner}/${repo}/src/branch/${claudeBranch}`;
           branchLink = `\n[View branch](${branchUrl})`;
         } else {
           console.log(
@@ -127,7 +127,7 @@ export async function checkAndDeleteEmptyBranch(
         } else {
           // For other errors, assume the branch has commits to be safe
           console.log("Assuming branch exists due to non-404 error");
-          const branchUrl = `${GITEA_SERVER_URL}/${owner}/${repo}/tree/${claudeBranch}`;
+          const branchUrl = `${GITEA_SERVER_URL}/${owner}/${repo}/src/branch/${claudeBranch}`;
           branchLink = `\n[View branch](${branchUrl})`;
         }
       }

@@ -88,7 +88,7 @@ describe("checkAndDeleteEmptyBranch", () => {
 
     expect(result.shouldDeleteBranch).toBe(false);
     expect(result.branchLink).toBe(
-      `\n[View branch](${GITEA_SERVER_URL}/owner/repo/tree/claude/issue-123-20240101_123456)`,
+      `\n[View branch](${GITEA_SERVER_URL}/owner/repo/src/branch/claude/issue-123-20240101_123456)`,
     );
     expect(consoleLogSpy).not.toHaveBeenCalledWith(
       expect.stringContaining("has no commits"),
@@ -119,7 +119,7 @@ describe("checkAndDeleteEmptyBranch", () => {
 
     expect(result.shouldDeleteBranch).toBe(false);
     expect(result.branchLink).toBe(
-      `\n[View branch](${GITEA_SERVER_URL}/owner/repo/tree/claude/issue-123-20240101_123456)`,
+      `\n[View branch](${GITEA_SERVER_URL}/owner/repo/src/branch/claude/issue-123-20240101_123456)`,
     );
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       "Error checking for commits on Claude branch:",
