@@ -57,14 +57,12 @@ jobs:
   claude-response:
     runs-on: ubuntu-latest
     steps:
-      - uses: anthropics/claude-code-action@beta
+      - uses: actions/checkout@v4
+      - uses: markwylde/claude-code-gitea-action@45ee2dca55c6082b67de2b5ab5a1e78fcc409eae
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          # Optional: add custom trigger phrase (default: @claude)
-          # trigger_phrase: "/claude"
-          # Optional: add assignee trigger for issues
-          # assignee_trigger: "claude"
+          github_token: ${{ secrets.GITEA_TOKEN }}
+          gitea_api_url: https://gitea.example.com
 ```
 
 ## Inputs
