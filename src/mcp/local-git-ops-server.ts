@@ -60,15 +60,18 @@ function runGitCommand(command: string): string {
 
 // Helper function to ensure git user is configured
 function ensureGitUserConfigured(): void {
+  const gitName = process.env.CLAUDE_GIT_NAME || "Claude";
+  const gitEmail = process.env.CLAUDE_GIT_EMAIL || "claude@anthropic.com";
+
   try {
     // Check if user.email is already configured
     runGitCommand("git config user.email");
     console.log(`[LOCAL-GIT-MCP] Git user.email already configured`);
   } catch (error) {
     console.log(
-      `[LOCAL-GIT-MCP] Git user.email not configured, setting default`,
+      `[LOCAL-GIT-MCP] Git user.email not configured, setting to: ${gitEmail}`,
     );
-    runGitCommand('git config user.email "claude@anthropic.com"');
+    runGitCommand(`git config user.email "${gitEmail}"`);
   }
 
   try {
@@ -77,9 +80,9 @@ function ensureGitUserConfigured(): void {
     console.log(`[LOCAL-GIT-MCP] Git user.name already configured`);
   } catch (error) {
     console.log(
-      `[LOCAL-GIT-MCP] Git user.name not configured, setting default`,
+      `[LOCAL-GIT-MCP] Git user.name not configured, setting to: ${gitName}`,
     );
-    runGitCommand('git config user.name "Claude"');
+    runGitCommand(`git config user.name "${gitName}"`);
   }
 }
 

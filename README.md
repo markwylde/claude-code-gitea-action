@@ -64,26 +64,30 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           gitea_token: ${{ secrets.GITEA_TOKEN }}
+          claude_git_name: Claude  # optional
+          claude_git_email: claude@anthropic.com  # optional
 ```
 
 ## Inputs
 
-| Input                 | Description                                                                                                         | Required | Default   |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------- | -------- | --------- |
+| Input                 | Description                                                                                                                  | Required | Default   |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------- | --------- |
 | `anthropic_api_key`   | Anthropic API key (required for direct API, not needed for Bedrock/Vertex). Set to 'use-oauth' when using claude_credentials | No\*     | -         |
-| `claude_credentials`  | Claude OAuth credentials JSON for Claude AI Max subscription authentication                                         | No       | -         |
-| `direct_prompt`       | Direct prompt for Claude to execute automatically without needing a trigger (for automated workflows)               | No       | -         |
-| `timeout_minutes`     | Timeout in minutes for execution                                                                                    | No       | `30`      |
-| `gitea_token`         | Gitea token for Claude to operate with. **Only include this if you're connecting a custom GitHub app of your own!** | No       | -         |
-| `model`               | Model to use (provider-specific format required for Bedrock/Vertex)                                                 | No       | -         |
-| `anthropic_model`     | **DEPRECATED**: Use `model` instead. Kept for backward compatibility.                                               | No       | -         |
-| `use_bedrock`         | Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API                                         | No       | `false`   |
-| `use_vertex`          | Use Google Vertex AI with OIDC authentication instead of direct Anthropic API                                       | No       | `false`   |
-| `allowed_tools`       | Additional tools for Claude to use (the base GitHub tools will always be included)                                  | No       | ""        |
-| `disallowed_tools`    | Tools that Claude should never use                                                                                  | No       | ""        |
-| `custom_instructions` | Additional custom instructions to include in the prompt for Claude                                                  | No       | ""        |
-| `assignee_trigger`    | The assignee username that triggers the action (e.g. @claude). Only used for issue assignment                       | No       | -         |
-| `trigger_phrase`      | The trigger phrase to look for in comments, issue/PR bodies, and issue titles                                       | No       | `@claude` |
+| `claude_credentials`  | Claude OAuth credentials JSON for Claude AI Max subscription authentication                                                  | No       | -         |
+| `direct_prompt`       | Direct prompt for Claude to execute automatically without needing a trigger (for automated workflows)                        | No       | -         |
+| `timeout_minutes`     | Timeout in minutes for execution                                                                                             | No       | `30`      |
+| `gitea_token`         | Gitea token for Claude to operate with. **Only include this if you're connecting a custom GitHub app of your own!**          | No       | -         |
+| `model`               | Model to use (provider-specific format required for Bedrock/Vertex)                                                          | No       | -         |
+| `anthropic_model`     | **DEPRECATED**: Use `model` instead. Kept for backward compatibility.                                                        | No       | -         |
+| `use_bedrock`         | Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API                                                  | No       | `false`   |
+| `use_vertex`          | Use Google Vertex AI with OIDC authentication instead of direct Anthropic API                                                | No       | `false`   |
+| `allowed_tools`       | Additional tools for Claude to use (the base GitHub tools will always be included)                                           | No       | ""        |
+| `disallowed_tools`    | Tools that Claude should never use                                                                                           | No       | ""        |
+| `custom_instructions` | Additional custom instructions to include in the prompt for Claude                                                           | No       | ""        |
+| `assignee_trigger`    | The assignee username that triggers the action (e.g. @claude). Only used for issue assignment                                | No       | -         |
+| `trigger_phrase`      | The trigger phrase to look for in comments, issue/PR bodies, and issue titles                                                | No       | `@claude` |
+| `claude_git_name`     | Git user.name for commits made by Claude                                                                                     | No       | `Claude`  |
+| `claude_git_email`    | Git user.email for commits made by Claude                                                                                    | No       | `claude@anthropic.com` |
 
 \*Required when using direct Anthropic API (default and when not using Bedrock or Vertex)
 
@@ -96,6 +100,7 @@ This action supports authentication using Claude Max OAuth credentials. This all
 ### Setup
 
 1. **Get OAuth Credentials**: Use Claude Code to generate OAuth credentials:
+
    ```
    /auth-setup
    ```
@@ -107,7 +112,7 @@ This action supports authentication using Claude Max OAuth credentials. This all
 ```yaml
 - uses: anthropics/claude-code-action@beta
   with:
-    anthropic_api_key: 'use-oauth'
+    anthropic_api_key: "use-oauth"
     claude_credentials: ${{ secrets.CLAUDE_CREDENTIALS }}
     gitea_token: ${{ secrets.GITHUB_TOKEN }}
 ```

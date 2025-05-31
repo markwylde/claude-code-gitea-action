@@ -63,6 +63,14 @@ inputs:
     description: "Timeout in minutes for execution"
     required: false
     default: "30"
+  claude_git_name:
+    description: "Git user.name for commits made by Claude"
+    required: false
+    default: "Claude"
+  claude_git_email:
+    description: "Git user.email for commits made by Claude"
+    required: false
+    default: "claude@anthropic.com"
 
 outputs:
   execution_file:
@@ -133,6 +141,10 @@ runs:
         # GitHub token for repository access
         GITHUB_TOKEN: ${{ steps.prepare.outputs.GITHUB_TOKEN }}
         GITEA_API_URL: ${{ env.GITHUB_SERVER_URL }}
+
+        # Git configuration
+        CLAUDE_GIT_NAME: ${{ inputs.claude_git_name }}
+        CLAUDE_GIT_EMAIL: ${{ inputs.claude_git_email }}
 
         # Provider configuration (for future cloud provider support)
         ANTHROPIC_BASE_URL: ${{ env.ANTHROPIC_BASE_URL }}

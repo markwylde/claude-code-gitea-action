@@ -65,3 +65,10 @@ When adding new MCP tools:
 2. **Expose to Claude**: Add the tool name to `BASE_ALLOWED_TOOLS` array in `src/create-prompt/index.ts`
 3. **Tool Naming**: Follow the pattern `mcp__server_name__tool_name` (e.g., `mcp__local_git_ops__checkout_branch`)
 4. **Documentation**: Update the prompt's "What You CAN Do" section if the tool adds new capabilities
+
+## Feature Development Reminders
+
+When implementing new features that add action inputs, configuration options, or capabilities:
+1. Always update README.md to document new inputs in the inputs table
+2. Update example workflows to show how new inputs can be used
+3. Add appropriate defaults and descriptions to action.yml

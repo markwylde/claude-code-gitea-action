@@ -25,10 +25,12 @@ async function run() {
     // Step 1: Setup OAuth credentials if provided
     const claudeCredentials = process.env.CLAUDE_CREDENTIALS;
     const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-    
+
     if (claudeCredentials && anthropicApiKey === "use-oauth") {
       await setupOAuthCredentials(claudeCredentials);
-      console.log("OAuth credentials configured for Claude AI Max subscription");
+      console.log(
+        "OAuth credentials configured for Claude AI Max subscription",
+      );
     }
 
     // Step 2: Setup GitHub token

@@ -20,16 +20,20 @@ interface ClaudeCredentialsInput {
 export async function setupOAuthCredentials(credentialsJson: string) {
   try {
     // Parse the credentials JSON
-    const parsedCredentials: ClaudeCredentialsInput = JSON.parse(credentialsJson);
-    
+    const parsedCredentials: ClaudeCredentialsInput =
+      JSON.parse(credentialsJson);
+
     if (!parsedCredentials.claudeAiOauth) {
       throw new Error("Invalid credentials format: missing claudeAiOauth");
     }
 
-    const { accessToken, refreshToken, expiresAt } = parsedCredentials.claudeAiOauth;
-    
+    const { accessToken, refreshToken, expiresAt } =
+      parsedCredentials.claudeAiOauth;
+
     if (!accessToken || !refreshToken || !expiresAt) {
-      throw new Error("Invalid credentials format: missing required OAuth fields");
+      throw new Error(
+        "Invalid credentials format: missing required OAuth fields",
+      );
     }
 
     const claudeDir = join(homedir(), ".claude");
