@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: markwylde/claude-code-gitea-action@v1.0.1
+      - uses: markwylde/claude-code-gitea-action@v1.0.2
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           gitea_token: ${{ secrets.GITEA_TOKEN }}
