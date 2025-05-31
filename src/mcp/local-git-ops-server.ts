@@ -127,6 +127,102 @@ server.tool(
   },
 );
 
+// Checkout branch tool
+server.tool(
+  "checkout_branch",
+  "Checkout an existing branch using local git operations",
+  {
+    branch_name: z.string().describe("Name of the existing branch to checkout"),
+    create_if_missing: z
+      .boolean()
+      .optional()
+      .describe(
+        "Create branch if it doesn't exist locally (defaults to false)",
+      ),
+    fetch_remote: z
+      .boolean()
+      .optional()
+      .describe(
+        "Fetch from remote if branch doesn't exist locally (defaults to true)",
+      ),
+  },
+  async ({ branch_name, create_if_missing = false, fetch_remote = true }) => {
+    try {
+      // Check if branch exists locally
+      let branchExists = false;
+      try {
+        runGitCommand(`git rev-parse --verify ${branch_name}`);
+        branchExists = true;
+      } catch (error) {
+        console.log(
+          `[LOCAL-GIT-MCP] Branch ${branch_name} doesn't exist locally`,
+        );
+      }
+
+      // If branch doesn't exist locally, try to fetch from remote
+      if (!branchExists && fetch_remote) {
+        try {
+          console.log(
+            `[LOCAL-GIT-MCP] Attempting to fetch ${branch_name} from remote`,
+          );
+          runGitCommand(`git fetch origin ${branch_name}:${branch_name}`);
+          branchExists = true;
+        } catch (error) {
+          console.log(
+            `[LOCAL-GIT-MCP] Branch ${branch_name} doesn't exist on remote`,
+          );
+        }
+      }
+
+      // If branch still doesn't exist and create_if_missing is true, create it
+      if (!branchExists && create_if_missing) {
+        console.log(`[LOCAL-GIT-MCP] Creating new branch ${branch_name}`);
+        runGitCommand(`git checkout -b ${branch_name}`);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Successfully created and checked out new branch: ${branch_name}`,
+            },
+          ],
+        };
+      }
+
+      // If branch doesn't exist and we can't/won't create it, throw error
+      if (!branchExists) {
+        throw new Error(
+          `Branch '${branch_name}' does not exist locally or on remote. Use create_if_missing=true to create it.`,
+        );
+      }
+
+      // Checkout the existing branch
+      runGitCommand(`git checkout ${branch_name}`);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Successfully checked out branch: ${branch_name}`,
+          },
+        ],
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error checking out branch: ${errorMessage}`,
+          },
+        ],
+        error: errorMessage,
+        isError: true,
+      };
+    }
+  },
+);
+
 // Commit files tool
 server.tool(
   "commit_files",

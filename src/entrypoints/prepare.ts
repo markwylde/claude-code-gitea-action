@@ -73,7 +73,7 @@ async function run() {
       core.setOutput("CLAUDE_BRANCH", branchInfo.claudeBranch);
     }
 
-    // Step 9: Update initial comment with branch link (only for issues that created a new branch)
+    // Step 9: Update initial comment with branch link (only if a claude branch was created)
     if (branchInfo.claudeBranch) {
       await updateTrackingComment(
         client,

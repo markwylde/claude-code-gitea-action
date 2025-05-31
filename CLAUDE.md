@@ -56,3 +56,12 @@ src/
 - The action creates branches for issues and pushes to PR branches directly
 - All actions create OIDC tokens for secure authentication
 - Progress is tracked through dynamic comment updates with checkboxes
+
+## MCP Tool Development
+
+When adding new MCP tools:
+
+1. **Add to MCP Server**: Implement the tool in the appropriate MCP server file (e.g., `src/mcp/local-git-ops-server.ts`)
+2. **Expose to Claude**: Add the tool name to `BASE_ALLOWED_TOOLS` array in `src/create-prompt/index.ts`
+3. **Tool Naming**: Follow the pattern `mcp__server_name__tool_name` (e.g., `mcp__local_git_ops__checkout_branch`)
+4. **Documentation**: Update the prompt's "What You CAN Do" section if the tool adds new capabilities
