@@ -566,6 +566,7 @@ ${
         eventData.isPR && !eventData.claudeBranch
           ? `
       - Commit changes using mcp__local_git_ops__commit_files to the existing branch (works for both new and existing files).
+      - Make sure commits follow the same convention as other commits in the repository.
       - Use mcp__local_git_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
       - CRITICAL: After committing, you MUST push the branch to the remote repository using mcp__local_git_ops__push_branch
       - After pushing, you MUST create a PR using mcp__local_git_ops__create_pull_request.
@@ -574,6 +575,7 @@ ${
             ? `
       - You are already on the correct branch (${eventData.claudeBranch}). Do not create a new branch.
       - Commit changes using mcp__local_git_ops__commit_files (works for both new and existing files)
+      - Make sure commits follow the same convention as other commits in the repository.
       - Use mcp__local_git_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
       - CRITICAL: After committing, you MUST push the branch to the remote repository using mcp__local_git_ops__push_branch
           `
