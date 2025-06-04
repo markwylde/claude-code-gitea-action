@@ -52,7 +52,7 @@ export async function setupBranch(
       );
 
       // Check out the base branch and let Claude create branches as needed
-      await $`git fetch origin ${sourceBranch}`;
+      await $`git fetch origin --depth=1 ${sourceBranch}`;
       await $`git checkout ${sourceBranch}`;
       await $`git pull origin ${sourceBranch}`;
 
@@ -99,7 +99,7 @@ export async function setupBranch(
 
     // Ensure we have the latest version of the source branch
     console.log(`Fetching latest ${sourceBranch}...`);
-    await $`git fetch origin ${sourceBranch}`;
+    await $`git fetch origin --depth=1 ${sourceBranch}`;
 
     // Checkout the source branch
     console.log(`Checking out ${sourceBranch}...`);
