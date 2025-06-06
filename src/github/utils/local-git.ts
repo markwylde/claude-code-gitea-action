@@ -85,7 +85,7 @@ export async function branchHasChanges(
  */
 export async function fetchBranch(branchName: string): Promise<boolean> {
   try {
-    await $`git fetch origin ${branchName}`;
+    await $`git fetch origin --depth=1 ${branchName}`;
     return true;
   } catch (error) {
     console.log(
