@@ -35,7 +35,7 @@ describe("parseEnvVarsWithContext", () => {
         process.env = {
           ...BASE_ENV,
           BASE_BRANCH: "main",
-          CLAUDE_BRANCH: "claude/issue-67890-20240101_120000",
+          CLAUDE_BRANCH: "claude/issue-67890-20240101-1200",
         };
       });
 
@@ -44,7 +44,7 @@ describe("parseEnvVarsWithContext", () => {
           mockIssueCommentContext,
           "12345",
           "main",
-          "claude/issue-67890-20240101_120000",
+          "claude/issue-67890-20240101-1200",
         );
 
         expect(result.repository).toBe("test-owner/test-repo");
@@ -60,7 +60,7 @@ describe("parseEnvVarsWithContext", () => {
           expect(result.eventData.issueNumber).toBe("55");
           expect(result.eventData.commentId).toBe("12345678");
           expect(result.eventData.claudeBranch).toBe(
-            "claude/issue-67890-20240101_120000",
+            "claude/issue-67890-20240101-1200",
           );
           expect(result.eventData.baseBranch).toBe("main");
           expect(result.eventData.commentBody).toBe(
@@ -81,7 +81,7 @@ describe("parseEnvVarsWithContext", () => {
             mockIssueCommentContext,
             "12345",
             undefined,
-            "claude/issue-67890-20240101_120000",
+            "claude/issue-67890-20240101-1200",
           ),
         ).toThrow("BASE_BRANCH is required for issue_comment event");
       });
@@ -152,7 +152,7 @@ describe("parseEnvVarsWithContext", () => {
       process.env = {
         ...BASE_ENV,
         BASE_BRANCH: "main",
-        CLAUDE_BRANCH: "claude/issue-42-20240101_120000",
+        CLAUDE_BRANCH: "claude/issue-42-20240101-1200",
       };
     });
 
@@ -161,7 +161,7 @@ describe("parseEnvVarsWithContext", () => {
         mockIssueOpenedContext,
         "12345",
         "main",
-        "claude/issue-42-20240101_120000",
+        "claude/issue-42-20240101-1200",
       );
 
       expect(result.eventData.eventName).toBe("issues");
@@ -174,7 +174,7 @@ describe("parseEnvVarsWithContext", () => {
         expect(result.eventData.issueNumber).toBe("42");
         expect(result.eventData.baseBranch).toBe("main");
         expect(result.eventData.claudeBranch).toBe(
-          "claude/issue-42-20240101_120000",
+          "claude/issue-42-20240101-1200",
         );
       }
     });
@@ -184,7 +184,7 @@ describe("parseEnvVarsWithContext", () => {
         mockIssueAssignedContext,
         "12345",
         "main",
-        "claude/issue-123-20240101_120000",
+        "claude/issue-123-20240101-1200",
       );
 
       expect(result.eventData.eventName).toBe("issues");
@@ -197,7 +197,7 @@ describe("parseEnvVarsWithContext", () => {
         expect(result.eventData.issueNumber).toBe("123");
         expect(result.eventData.baseBranch).toBe("main");
         expect(result.eventData.claudeBranch).toBe(
-          "claude/issue-123-20240101_120000",
+          "claude/issue-123-20240101-1200",
         );
         expect(result.eventData.assigneeTrigger).toBe("@claude-bot");
       }
@@ -215,9 +215,58 @@ describe("parseEnvVarsWithContext", () => {
           mockIssueOpenedContext,
           "12345",
           undefined,
-          "claude/issue-42-20240101_120000",
+          "claude/issue-42-20240101-1200",
         ),
       ).toThrow("BASE_BRANCH is required for issues event");
+    });
+
+    test("should allow issue assigned event with direct_prompt and no assigneeTrigger", () => {
+      const contextWithDirectPrompt = createMockContext({
+        ...mockIssueAssignedContext,
+        inputs: {
+          ...mockIssueAssignedContext.inputs,
+          assigneeTrigger: "", // No assignee trigger
+          directPrompt: "Please assess this issue", // But direct prompt is provided
+        },
+      });
+
+      const result = prepareContext(
+        contextWithDirectPrompt,
+        "12345",
+        "main",
+        "claude/issue-123-20240101-1200",
+      );
+
+      expect(result.eventData.eventName).toBe("issues");
+      expect(result.eventData.isPR).toBe(false);
+      expect(result.directPrompt).toBe("Please assess this issue");
+      if (
+        result.eventData.eventName === "issues" &&
+        result.eventData.eventAction === "assigned"
+      ) {
+        expect(result.eventData.issueNumber).toBe("123");
+        expect(result.eventData.assigneeTrigger).toBeUndefined();
+      }
+    });
+
+    test("should throw error when neither assigneeTrigger nor directPrompt provided for issue assigned event", () => {
+      const contextWithoutTriggers = createMockContext({
+        ...mockIssueAssignedContext,
+        inputs: {
+          ...mockIssueAssignedContext.inputs,
+          assigneeTrigger: "", // No assignee trigger
+          directPrompt: "", // No direct prompt
+        },
+      });
+
+      expect(() =>
+        prepareContext(
+          contextWithoutTriggers,
+          "12345",
+          "main",
+          "claude/issue-123-20240101-1200",
+        ),
+      ).toThrow("ASSIGNEE_TRIGGER is required for issue assigned event");
     });
   });
 
@@ -242,7 +291,7 @@ describe("parseEnvVarsWithContext", () => {
         ...mockPullRequestCommentContext,
         inputs: {
           ...mockPullRequestCommentContext.inputs,
-          allowedTools: "Tool1,Tool2",
+          allowedTools: ["Tool1", "Tool2"],
         },
       });
       const result = prepareContext(contextWithAllowedTools, "12345");

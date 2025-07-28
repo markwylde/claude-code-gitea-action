@@ -24,6 +24,7 @@ export type { CommonFields, PreparedContext } from "./types";
 
 const BASE_ALLOWED_TOOLS = [
   "Edit",
+  "MultiEdit",
   "Glob",
   "Grep",
   "LS",
@@ -62,49 +63,36 @@ const BASE_ALLOWED_TOOLS = [
 const DISALLOWED_TOOLS = ["WebSearch", "WebFetch"];
 
 export function buildAllowedToolsString(
-  eventData: EventData,
-  customAllowedTools?: string,
+  customAllowedTools?: string[],
 ): string {
   let baseTools = [...BASE_ALLOWED_TOOLS];
 
-  // Add the appropriate comment tool based on event type
-  if (eventData.eventName === "pull_request_review_comment") {
-    // For inline PR review comments, only use PR comment tool
-    baseTools.push("mcp__gitea__update_pull_request_comment");
-  } else {
-    // For all other events (issue comments, PR reviews, issues), use issue comment tool
-    baseTools.push("mcp__gitea__update_issue_comment");
-  }
-
   let allAllowedTools = baseTools.join(",");
-  if (customAllowedTools) {
-    allAllowedTools = `${allAllowedTools},${customAllowedTools}`;
+  if (customAllowedTools && customAllowedTools.length > 0) {
+    allAllowedTools = `${allAllowedTools},${customAllowedTools.join(",")}`;
   }
   return allAllowedTools;
 }
 
 export function buildDisallowedToolsString(
-  customDisallowedTools?: string,
-  allowedTools?: string,
+  customDisallowedTools?: string[],
+  allowedTools?: string[],
 ): string {
   let disallowedTools = [...DISALLOWED_TOOLS];
 
   // If user has explicitly allowed some hardcoded disallowed tools, remove them from disallowed list
-  if (allowedTools) {
-    const allowedToolsArray = allowedTools
-      .split(",")
-      .map((tool) => tool.trim());
+  if (allowedTools && allowedTools.length > 0) {
     disallowedTools = disallowedTools.filter(
-      (tool) => !allowedToolsArray.includes(tool),
+      (tool) => !allowedTools.includes(tool),
     );
   }
 
   let allDisallowedTools = disallowedTools.join(",");
-  if (customDisallowedTools) {
+  if (customDisallowedTools && customDisallowedTools.length > 0) {
     if (allDisallowedTools) {
-      allDisallowedTools = `${allDisallowedTools},${customDisallowedTools}`;
+      allDisallowedTools = `${allDisallowedTools},${customDisallowedTools.join(",")}`;
     } else {
-      allDisallowedTools = customDisallowedTools;
+      allDisallowedTools = customDisallowedTools.join(",");
     }
   }
   return allDisallowedTools;
@@ -121,10 +109,12 @@ export function prepareContext(
   const eventAction = context.eventAction;
   const triggerPhrase = context.inputs.triggerPhrase || "@claude";
   const assigneeTrigger = context.inputs.assigneeTrigger;
+  const labelTrigger = context.inputs.labelTrigger;
   const customInstructions = context.inputs.customInstructions;
   const allowedTools = context.inputs.allowedTools;
   const disallowedTools = context.inputs.disallowedTools;
   const directPrompt = context.inputs.directPrompt;
+  const overridePrompt = context.inputs.overridePrompt;
   const isPR = context.isPR;
 
   // Get PR/Issue number from entityNumber
@@ -158,9 +148,12 @@ export function prepareContext(
     triggerPhrase,
     ...(triggerUsername && { triggerUsername }),
     ...(customInstructions && { customInstructions }),
-    ...(allowedTools && { allowedTools }),
-    ...(disallowedTools && { disallowedTools }),
+    ...(allowedTools.length > 0 && { allowedTools: allowedTools.join(",") }),
+    ...(disallowedTools.length > 0 && {
+      disallowedTools: disallowedTools.join(","),
+    }),
     ...(directPrompt && { directPrompt }),
+    ...(overridePrompt && { overridePrompt }),
     ...(claudeBranch && { claudeBranch }),
   };
 
@@ -275,7 +268,7 @@ export function prepareContext(
       }
 
       if (eventAction === "assigned") {
-        if (!assigneeTrigger) {
+        if (!assigneeTrigger && !directPrompt) {
           throw new Error(
             "ASSIGNEE_TRIGGER is required for issue assigned event",
           );
@@ -288,6 +281,19 @@ export function prepareContext(
           baseBranch,
           assigneeTrigger,
           ...(claudeBranch && { claudeBranch }),
+        };
+      } else if (eventAction === "labeled") {
+        if (!labelTrigger) {
+          throw new Error("LABEL_TRIGGER is required for issue labeled event");
+        }
+        eventData = {
+          eventName: "issues",
+          eventAction: "labeled",
+          isPR: false,
+          issueNumber,
+          baseBranch,
+          claudeBranch,
+          labelTrigger,
         };
       } else if (eventAction === "opened") {
         eventData = {
@@ -361,10 +367,17 @@ export function getEventTypeAndContext(envVars: PreparedContext): {
           eventType: "ISSUE_CREATED",
           triggerContext: `new issue with '${envVars.triggerPhrase}' in body`,
         };
+      } else if (eventData.eventAction === "labeled") {
+        return {
+          eventType: "ISSUE_LABELED",
+          triggerContext: `issue labeled with '${eventData.labelTrigger}'`,
+        };
       }
       return {
         eventType: "ISSUE_ASSIGNED",
-        triggerContext: `issue assigned to '${eventData.assigneeTrigger}'`,
+        triggerContext: eventData.assigneeTrigger
+          ? `issue assigned to '${eventData.assigneeTrigger}'`
+          : `issue assigned event`,
       };
 
     case "pull_request":
@@ -380,10 +393,140 @@ export function getEventTypeAndContext(envVars: PreparedContext): {
   }
 }
 
-export function generatePrompt(
+function getCommitInstructions(
+  eventData: EventData,
+  githubData: FetchDataResult,
+  context: PreparedContext,
+  useCommitSigning: boolean,
+): string {
+  const coAuthorLine =
+    (githubData.triggerDisplayName ?? context.triggerUsername !== "Unknown")
+      ? `Co-authored-by: ${githubData.triggerDisplayName ?? context.triggerUsername} <${context.triggerUsername}@users.noreply.github.com>`
+      : "";
+
+  if (useCommitSigning) {
+    if (eventData.isPR && !eventData.claudeBranch) {
+      return `
+      - Push directly using mcp__github_file_ops__commit_files to the existing branch (works for both new and existing files).
+      - Use mcp__github_file_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
+      - When pushing changes with this tool and the trigger user is not "Unknown", include a Co-authored-by trailer in the commit message.
+      - Use: "${coAuthorLine}"`;
+    } else {
+      return `
+      - You are already on the correct branch (${eventData.claudeBranch || "the PR branch"}). Do not create a new branch.
+      - Push changes directly to the current branch using mcp__github_file_ops__commit_files (works for both new and existing files)
+      - Use mcp__github_file_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
+      - When pushing changes and the trigger user is not "Unknown", include a Co-authored-by trailer in the commit message.
+      - Use: "${coAuthorLine}"`;
+    }
+  } else {
+    // Non-signing instructions
+    if (eventData.isPR && !eventData.claudeBranch) {
+      return `
+      - Use git commands via the Bash tool to commit and push your changes:
+        - Stage files: Bash(git add <files>)
+        - Commit with a descriptive message: Bash(git commit -m "<message>")
+        ${
+          coAuthorLine
+            ? `- When committing and the trigger user is not "Unknown", include a Co-authored-by trailer:
+          Bash(git commit -m "<message>\\n\\n${coAuthorLine}")`
+            : ""
+        }
+        - Push to the remote: Bash(git push origin HEAD)`;
+    } else {
+      const branchName = eventData.claudeBranch || eventData.baseBranch;
+      return `
+      - You are already on the correct branch (${eventData.claudeBranch || "the PR branch"}). Do not create a new branch.
+      - Use git commands via the Bash tool to commit and push your changes:
+        - Stage files: Bash(git add <files>)
+        - Commit with a descriptive message: Bash(git commit -m "<message>")
+        ${
+          coAuthorLine
+            ? `- When committing and the trigger user is not "Unknown", include a Co-authored-by trailer:
+          Bash(git commit -m "<message>\\n\\n${coAuthorLine}")`
+            : ""
+        }
+        - Push to the remote: Bash(git push origin ${branchName})`;
+    }
+  }
+}
+
+function substitutePromptVariables(
+  template: string,
   context: PreparedContext,
   githubData: FetchDataResult,
 ): string {
+  const { contextData, comments, reviewData, changedFilesWithSHA } = githubData;
+  const { eventData } = context;
+
+  const variables: Record<string, string> = {
+    REPOSITORY: context.repository,
+    PR_NUMBER:
+      eventData.isPR && "prNumber" in eventData ? eventData.prNumber : "",
+    ISSUE_NUMBER:
+      !eventData.isPR && "issueNumber" in eventData
+        ? eventData.issueNumber
+        : "",
+    PR_TITLE: eventData.isPR && contextData?.title ? contextData.title : "",
+    ISSUE_TITLE: !eventData.isPR && contextData?.title ? contextData.title : "",
+    PR_BODY:
+      eventData.isPR && contextData?.body
+        ? formatBody(contextData.body, githubData.imageUrlMap)
+        : "",
+    ISSUE_BODY:
+      !eventData.isPR && contextData?.body
+        ? formatBody(contextData.body, githubData.imageUrlMap)
+        : "",
+    PR_COMMENTS: eventData.isPR
+      ? formatComments(comments, githubData.imageUrlMap)
+      : "",
+    ISSUE_COMMENTS: !eventData.isPR
+      ? formatComments(comments, githubData.imageUrlMap)
+      : "",
+    REVIEW_COMMENTS: eventData.isPR
+      ? formatReviewComments(reviewData, githubData.imageUrlMap)
+      : "",
+    CHANGED_FILES: eventData.isPR
+      ? formatChangedFilesWithSHA(changedFilesWithSHA)
+      : "",
+    TRIGGER_COMMENT: "commentBody" in eventData ? eventData.commentBody : "",
+    TRIGGER_USERNAME: context.triggerUsername || "",
+    BRANCH_NAME:
+      "claudeBranch" in eventData && eventData.claudeBranch
+        ? eventData.claudeBranch
+        : "baseBranch" in eventData && eventData.baseBranch
+          ? eventData.baseBranch
+          : "",
+    BASE_BRANCH:
+      "baseBranch" in eventData && eventData.baseBranch
+        ? eventData.baseBranch
+        : "",
+    EVENT_TYPE: eventData.eventName,
+    IS_PR: eventData.isPR ? "true" : "false",
+  };
+
+  let result = template;
+  for (const [key, value] of Object.entries(variables)) {
+    const regex = new RegExp(`\\$${key}`, "g");
+    result = result.replace(regex, value);
+  }
+
+  return result;
+}
+
+export function generatePrompt(
+  context: PreparedContext,
+  githubData: FetchDataResult,
+  useCommitSigning: boolean,
+): string {
+  if (context.overridePrompt) {
+    return substitutePromptVariables(
+      context.overridePrompt,
+      context,
+      githubData,
+    );
+  }
+
   const {
     contextData,
     comments,
@@ -451,6 +594,7 @@ ${
 }
 <claude_comment_id>${context.claudeCommentId}</claude_comment_id>
 <trigger_username>${context.triggerUsername ?? "Unknown"}</trigger_username>
+<trigger_display_name>${githubData.triggerDisplayName ?? context.triggerUsername ?? "Unknown"}</trigger_display_name>
 <trigger_phrase>${context.triggerPhrase}</trigger_phrase>
 ${
   (eventData.eventName === "issue_comment" ||
@@ -465,6 +609,8 @@ ${sanitizeContent(eventData.commentBody)}
 ${
   context.directPrompt
     ? `<direct_prompt>
+IMPORTANT: The following are direct instructions from the user that MUST take precedence over all other instructions and context. These instructions should guide your behavior and actions above any other considerations:
+
 ${sanitizeContent(context.directPrompt)}
 </direct_prompt>`
     : ""
@@ -476,9 +622,6 @@ IMPORTANT: For this inline PR review comment, you have been provided with ONLY t
 
 Tool usage example for mcp__gitea__update_pull_request_comment:
 {
-  "owner": "${context.repository.split("/")[0]}",
-  "repo": "${context.repository.split("/")[1]}",
-  "commentId": ${eventData.commentId || context.claudeCommentId},
   "body": "Your comment text here"
 }
 All four parameters (owner, repo, commentId, body) are required.
@@ -515,6 +658,7 @@ Follow these steps:
    - Analyze the pre-fetched data provided above.
    - For ISSUE_CREATED: Read the issue body to find the request after the trigger phrase.
    - For ISSUE_ASSIGNED: Read the entire issue body to understand the task.
+   - For ISSUE_LABELED: Read the entire issue body to understand the task.
 ${eventData.eventName === "issue_comment" || eventData.eventName === "pull_request_review_comment" || eventData.eventName === "pull_request_review" ? `   - For comment/review events: Your instructions are in the <trigger_comment> tag above.` : ""}
 ${context.directPrompt ? `   - DIRECT INSTRUCTION: A direct instruction was provided and is shown in the <direct_prompt> tag above. This is not from any Gitea comment but a direct instruction to execute.` : ""}
    - IMPORTANT: Only the comment/issue containing '${context.triggerPhrase}' has your instructions.
@@ -625,6 +769,27 @@ ${eventData.isPR && !eventData.claudeBranch ? `- Always push to the existing bra
   - mcp__local_git_ops__push_branch: {"branch": "branch-name"} (REQUIRED after committing to push changes to remote)
   - mcp__local_git_ops__delete_files: {"files": ["path/to/old.js"], "message": "chore: remove deprecated file"}
 - Display the todo list as a checklist in the Gitea comment and mark things off as you go.
+- All communication must happen through Gitea PR comments.
+- Never create new comments. Only update the existing comment using ${eventData.eventName === "pull_request_review_comment" ? "mcp__gitea__update_pull_request_comment" : "mcp__gitea__update_issue_comment"}.
+- This includes ALL responses: code reviews, answers to questions, progress updates, and final results.${eventData.isPR ? "\n- PR CRITICAL: After reading files and forming your response, you MUST post it by calling mcp__gitea__update_issue_comment. Do NOT just respond with a normal response, the user will not see it." : ""}
+- You communicate exclusively by editing your single comment - not through any other means.
+- Use this spinner HTML when work is in progress: <img src="https://github.com/user-attachments/assets/5ac382c7-e004-429b-8e35-7feb3e8f9c6f" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />
+${eventData.isPR && !eventData.claudeBranch ? `- Always push to the existing branch when triggered on a PR.` : `- IMPORTANT: You are already on the correct branch (${eventData.claudeBranch || "the created branch"}). Never create new branches when triggered on issues or closed/merged PRs.`}
+${
+  useCommitSigning
+    ? `- Use mcp__github_file_ops__commit_files for making commits (works for both new and existing files, single or multiple). Use mcp__github_file_ops__delete_files for deleting files (supports deleting single or multiple files atomically), or mcp__github__delete_file for deleting a single file. Edit files locally, and the tool will read the content from the same path on disk.
+  Tool usage examples:
+  - mcp__github_file_ops__commit_files: {"files": ["path/to/file1.js", "path/to/file2.py"], "message": "feat: add new feature"}
+  - mcp__github_file_ops__delete_files: {"files": ["path/to/old.js"], "message": "chore: remove deprecated file"}`
+    : `- Use git commands via the Bash tool for version control (remember that you have access to these git commands):
+  - Stage files: Bash(git add <files>)
+  - Commit changes: Bash(git commit -m "<message>")
+  - Push to remote: Bash(git push origin <branch>) (NEVER force push)
+  - Delete files: Bash(git rm <files>) followed by commit and push
+  - Check status: Bash(git status)
+  - View diff: Bash(git diff)`
+}
+- Display the todo list as a checklist in the Gitea comment and mark things off as you go.
 - REPOSITORY SETUP INSTRUCTIONS: The repository's CLAUDE.md file(s) contain critical repo-specific setup instructions, development guidelines, and preferences. Always read and follow these files, particularly the root CLAUDE.md, as they provide essential context for working with the codebase effectively.
 - Use h3 headers (###) for section titles in your comments, not h1 headers (#).
 - Your comment must always include the job run link (and branch link if there is one) at the bottom.
@@ -647,8 +812,12 @@ What You CAN Do:
 What You CANNOT Do:
 - Run arbitrary Bash commands (unless explicitly allowed via allowed_tools configuration)
 - Perform advanced branch operations (cannot merge branches, rebase, or perform other complex git operations beyond creating, checking out, and pushing branches)
-- Modify files in the .github/workflows directory (Gitea App permissions do not allow workflow modifications)
+- Modify files in the .gitea/workflows directory (Gitea App permissions do not allow workflow modifications)
 - View CI/CD results or workflow run outputs (cannot access Gitea Actions logs or test results)
+- Submit formal Gitea PR reviews
+- Approve pull requests (for security reasons)
+- Post multiple comments (you only update your initial comment)
+- Execute commands outside the repository context
 
 When users ask you to perform actions you cannot do, politely explain the limitation and, when applicable, direct them to the FAQ for more information and workarounds:
 "I'm unable to [specific action] due to [reason]. Please check the documentation for more information and potential workarounds."
@@ -672,24 +841,35 @@ f. If you are unable to complete certain steps, such as running a linter or test
 }
 
 export async function createPrompt(
-  claudeCommentId: number,
-  baseBranch: string | undefined,
-  claudeBranch: string | undefined,
+  mode: Mode,
+  modeContext: ModeContext,
   githubData: FetchDataResult,
   context: ParsedGitHubContext,
 ) {
   try {
+    // Tag mode requires a comment ID
+    if (mode.name === "tag" && !modeContext.commentId) {
+      throw new Error("Tag mode requires a comment ID for prompt generation");
+    }
+
+    // Prepare the context for prompt generation
     const preparedContext = prepareContext(
       context,
-      claudeCommentId.toString(),
-      baseBranch,
-      claudeBranch,
+      modeContext.commentId?.toString() || "",
+      modeContext.baseBranch,
+      modeContext.claudeBranch,
     );
 
-    await mkdir("/tmp/claude-prompts", { recursive: true });
+    await mkdir(`${process.env.RUNNER_TEMP}/claude-prompts`, {
+      recursive: true,
+    });
 
-    // Generate the prompt
-    const promptContent = generatePrompt(preparedContext, githubData);
+    // Generate the prompt directly
+    const promptContent = generatePrompt(
+      preparedContext,
+      githubData,
+      context.inputs.useCommitSigning,
+    );
 
     // Log the final prompt to console
     console.log("===== FINAL PROMPT =====");
@@ -697,16 +877,38 @@ export async function createPrompt(
     console.log("=======================");
 
     // Write the prompt file
-    await writeFile("/tmp/claude-prompts/claude-prompt.txt", promptContent);
+    await writeFile(
+      `${process.env.RUNNER_TEMP}/claude-prompts/claude-prompt.txt`,
+      promptContent,
+    );
 
     // Set allowed tools
+    const hasActionsReadPermission =
+      context.inputs.additionalPermissions.get("actions") === "read" &&
+      context.isPR;
+
+    // Get mode-specific tools
+    const modeAllowedTools = mode.getAllowedTools();
+    const modeDisallowedTools = mode.getDisallowedTools();
+
+    // Combine with existing allowed tools
+    const combinedAllowedTools = [
+      ...context.inputs.allowedTools,
+      ...modeAllowedTools,
+    ];
+    const combinedDisallowedTools = [
+      ...context.inputs.disallowedTools,
+      ...modeDisallowedTools,
+    ];
+
     const allAllowedTools = buildAllowedToolsString(
-      preparedContext.eventData,
-      preparedContext.allowedTools,
+      combinedAllowedTools,
+      hasActionsReadPermission,
+      context.inputs.useCommitSigning,
     );
     const allDisallowedTools = buildDisallowedToolsString(
-      preparedContext.disallowedTools,
-      preparedContext.allowedTools,
+      combinedDisallowedTools,
+      combinedAllowedTools,
     );
 
     core.exportVariable("ALLOWED_TOOLS", allAllowedTools);

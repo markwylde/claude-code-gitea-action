@@ -60,12 +60,19 @@ describe("checkWritePermissions", () => {
     entityNumber: 1,
     isPR: false,
     inputs: {
+      mode: "tag",
       triggerPhrase: "@claude",
       assigneeTrigger: "",
-      allowedTools: "",
-      disallowedTools: "",
+      labelTrigger: "",
+      allowedTools: [],
+      disallowedTools: [],
       customInstructions: "",
       directPrompt: "",
+      overridePrompt: "",
+      branchPrefix: "claude/",
+      useStickyComment: false,
+      additionalPermissions: new Map(),
+      useCommitSigning: false,
     },
   });
 
