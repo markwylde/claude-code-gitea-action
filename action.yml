@@ -136,6 +136,29 @@ runs:
         GITEA_API_URL: ${{ env.GITHUB_SERVER_URL }}
         ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
 
+    - name: Install Base Action Dependencies
+      if: steps.prepare.outputs.contains_trigger == 'true'
+      shell: bash
+      run: |
+        echo "Installing base-action dependencies..."
+        cd ${GITHUB_ACTION_PATH}/base-action
+        bun install
+        echo "Base-action dependencies installed"
+        cd -
+
+        # Install Claude Code if no custom executable is provided
+        if [ -z "${{ inputs.path_to_claude_code_executable }}" ]; then
+          echo "Installing Claude Code..."
+          curl -fsSL https://claude.ai/install.sh | bash -s 1.0.117
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        else
+          echo "Using custom Claude Code executable: ${{ inputs.path_to_claude_code_executable }}"
+          # Add the directory containing the custom executable to PATH
+          CLAUDE_DIR=$(dirname "${{ inputs.path_to_claude_code_executable }}")
+          echo "$CLAUDE_DIR" >> "$GITHUB_PATH"
+        fi
+    # TODO pass claude_code_executable as input and use it here
+
     - name: Run Claude Code
       id: claude-code
       if: steps.prepare.outputs.contains_trigger == 'true'
