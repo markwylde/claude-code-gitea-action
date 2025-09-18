@@ -136,16 +136,10 @@ runs:
         GITEA_API_URL: ${{ env.GITHUB_SERVER_URL }}
         ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
 
-    - name: Install Base Action Dependencies
+    - name: Install Claude
       if: steps.prepare.outputs.contains_trigger == 'true'
       shell: bash
       run: |
-        echo "Installing base-action dependencies..."
-        cd ${GITHUB_ACTION_PATH}/base-action
-        bun install
-        echo "Base-action dependencies installed"
-        cd -
-
         # Install Claude Code if no custom executable is provided
         if [ -z "${{ inputs.path_to_claude_code_executable }}" ]; then
           echo "Installing Claude Code..."
