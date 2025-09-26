@@ -16,19 +16,17 @@ inputs:
     description: "The label that triggers the action (e.g. claude)"
     required: false
     default: "claude"
-  base_branch:
-    description: "The branch to use as the base/source when creating new branches (defaults to repository default branch)"
-    required: false
   branch_prefix:
     description: "The prefix to use for Claude branches (defaults to 'claude/', use 'claude-' for dash format)"
     required: false
     default: "claude/"
-
-  # Mode configuration
   mode:
-    description: "Execution mode for the action. Valid modes: 'tag' (default - triggered by mentions/assignments), 'agent' (for automation with no trigger checking)"
+    description: "Execution mode for the action. Valid modes: 'tag' (default) or 'agent'"
     required: false
     default: "tag"
+  base_branch:
+    description: "The branch to use as the base/source when creating new branches (defaults to repository default branch)"
+    required: false
 
   # Claude Code configuration
   model:
@@ -36,9 +34,6 @@ inputs:
     required: false
   anthropic_model:
     description: "DEPRECATED: Use 'model' instead. Model to use (provider-specific format required for Bedrock/Vertex)"
-    required: false
-  fallback_model:
-    description: "Enable automatic fallback to specified model when primary model is unavailable"
     required: false
   allowed_tools:
     description: "Additional tools for Claude to use (the base GitHub tools will always be included)"
@@ -60,37 +55,58 @@ inputs:
     description: "Complete replacement of Claude's prompt with custom template (supports variable substitution)"
     required: false
     default: ""
-  mcp_config:
-    description: "Additional MCP configuration (JSON string) that merges with the built-in GitHub MCP servers"
+
+  # New Claude Code settings
+  settings:
+    description: "Path to Claude Code settings JSON file, or settings JSON string"
+    required: false
+    default: ""
+  system_prompt:
+    description: "Override system prompt"
+    required: false
+    default: ""
+  append_system_prompt:
+    description: "Append to system prompt"
+    required: false
+    default: ""
+  claude_env:
+    description: "Custom environment variables to pass to Claude Code execution (YAML multiline format)"
+    required: false
+    default: ""
   additional_permissions:
     description: "Additional permissions to enable. Currently supports 'actions: read' for viewing workflow results"
     required: false
     default: ""
-  claude_env:
-    description: "Custom environment variables to pass to Claude Code execution (YAML format)"
-    required: false
-    default: ""
-  settings:
-    description: "Claude Code settings as JSON string or path to settings JSON file"
+  fallback_model:
+    description: "Enable automatic fallback to specified model when default model is overloaded"
     required: false
     default: ""
 
   # Auth configuration
   anthropic_api_key:
-    description: "Anthropic API key (required for direct API, not needed for Bedrock/Vertex). Set to 'use-oauth' when using claude_credentials"
+    description: "Anthropic API key (required for direct API, not needed for Bedrock/Vertex)"
     required: false
-  claude_credentials:
-    description: "Claude OAuth credentials JSON for Claude AI Max subscription authentication"
+  claude_code_oauth_token:
+    description: "Claude Code OAuth token (alternative to anthropic_api_key)"
     required: false
+    default: ""
   gitea_token:
     description: "Gitea token with repo and pull request permissions (defaults to GITHUB_TOKEN)"
     required: false
+  path_to_claude_code_executable:
+    description: "Path to a custom Claude Code executable to use instead of installing"
+    required: false
+    default: ""
   use_bedrock:
     description: "Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API"
     required: false
     default: "false"
   use_vertex:
     description: "Use Google Vertex AI with OIDC authentication instead of direct Anthropic API"
+    required: false
+    default: "false"
+  use_node_cache:
+    description: "Whether to use Node.js dependency caching (set to true only for Node.js projects with lock files)"
     required: false
     default: "false"
 
@@ -130,14 +146,14 @@ runs:
     - name: Install Dependencies
       shell: bash
       run: |
-        cd ${GITHUB_ACTION_PATH}
+        cd ${{ github.action_path }}
         bun install
 
     - name: Prepare action
       id: prepare
       shell: bash
       run: |
-        bun run ${GITHUB_ACTION_PATH}/src/entrypoints/prepare.ts
+        bun run ${{ github.action_path }}/src/entrypoints/prepare.ts
       env:
         MODE: ${{ inputs.mode }}
         TRIGGER_PHRASE: ${{ inputs.trigger_phrase }}
@@ -149,21 +165,53 @@ runs:
         DISALLOWED_TOOLS: ${{ inputs.disallowed_tools }}
         CUSTOM_INSTRUCTIONS: ${{ inputs.custom_instructions }}
         DIRECT_PROMPT: ${{ inputs.direct_prompt }}
+        OVERRIDE_PROMPT: ${{ inputs.override_prompt }}
+        ADDITIONAL_PERMISSIONS: ${{ inputs.additional_permissions }}
         OVERRIDE_GITHUB_TOKEN: ${{ inputs.gitea_token }}
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_RUN_ID: ${{ github.run_id }}
         GITEA_API_URL: ${{ env.GITHUB_SERVER_URL }}
         ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
-        CLAUDE_CREDENTIALS: ${{ inputs.claude_credentials }}
+
+    - name: Install Claude
+      if: steps.prepare.outputs.contains_trigger == 'true'
+      shell: bash
+      run: |
+        # Install Claude Code if no custom executable is provided
+        if [ -z "${{ inputs.path_to_claude_code_executable }}" ]; then
+          echo "Installing Claude Code..."
+          curl -fsSL https://claude.ai/install.sh | bash -s 1.0.117
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        else
+          echo "Using custom Claude Code executable: ${{ inputs.path_to_claude_code_executable }}"
+          # Add the directory containing the custom executable to PATH
+          CLAUDE_DIR=$(dirname "${{ inputs.path_to_claude_code_executable }}")
+          echo "$CLAUDE_DIR" >> "$GITHUB_PATH"
+        fi
+    # TODO pass claude_code_executable as input and use it here
 
     - name: Run Claude Code
       id: claude-code
       if: steps.prepare.outputs.contains_trigger == 'true'
-      shell: bash
-      run: |
-
-        # Run the base-action
-        bun run ${GITHUB_ACTION_PATH}/base-action/src/index.ts
+      uses: anthropics/claude-code-base-action@v0.0.63
+      with:
+        prompt_file: /tmp/claude-prompts/claude-prompt.txt
+        allowed_tools: ${{ env.ALLOWED_TOOLS }}
+        disallowed_tools: ${{ env.DISALLOWED_TOOLS }}
+        max_turns: ${{ inputs.max_turns }}
+        timeout_minutes: ${{ inputs.timeout_minutes }}
+        model: ${{ inputs.model || inputs.anthropic_model }}
+        mcp_config: ${{ steps.prepare.outputs.mcp_config }}
+        use_bedrock: ${{ inputs.use_bedrock }}
+        use_vertex: ${{ inputs.use_vertex }}
+        anthropic_api_key: ${{ inputs.anthropic_api_key }}
+        claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
+        settings: ${{ inputs.settings }}
+        system_prompt: ${{ inputs.system_prompt }}
+        append_system_prompt: ${{ inputs.append_system_prompt }}
+        claude_env: ${{ inputs.claude_env }}
+        fallback_model: ${{ inputs.fallback_model }}
+        use_node_cache: ${{ inputs.use_node_cache }}
       env:
         # Core configuration
         PROMPT_FILE: /tmp/claude-prompts/claude-prompt.txt
@@ -176,7 +224,15 @@ runs:
         USE_BEDROCK: ${{ inputs.use_bedrock }}
         USE_VERTEX: ${{ inputs.use_vertex }}
         ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
-        CLAUDE_CREDENTIALS: ${{ inputs.claude_credentials }}
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
+        
+        # New settings support
+        SETTINGS: ${{ inputs.settings }}
+        SYSTEM_PROMPT: ${{ inputs.system_prompt }}
+        APPEND_SYSTEM_PROMPT: ${{ inputs.append_system_prompt }}
+        CLAUDE_ENV: ${{ inputs.claude_env }}
+        FALLBACK_MODEL: ${{ inputs.fallback_model }}
+        USE_NODE_CACHE: ${{ inputs.use_node_cache }}
 
         # GitHub token for repository access
         GITHUB_TOKEN: ${{ steps.prepare.outputs.GITHUB_TOKEN }}
@@ -193,8 +249,6 @@ runs:
         AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
         AWS_SESSION_TOKEN: ${{ env.AWS_SESSION_TOKEN }}
         ANTHROPIC_BEDROCK_BASE_URL: ${{ env.ANTHROPIC_BEDROCK_BASE_URL }}
-
-        # GCP configuration
         ANTHROPIC_VERTEX_PROJECT_ID: ${{ env.ANTHROPIC_VERTEX_PROJECT_ID }}
         CLOUD_ML_REGION: ${{ env.CLOUD_ML_REGION }}
         GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
@@ -207,7 +261,7 @@ runs:
       if: steps.prepare.outputs.contains_trigger == 'true' && steps.prepare.outputs.claude_comment_id && always()
       shell: bash
       run: |
-        bun run ${GITHUB_ACTION_PATH}/src/entrypoints/update-comment-link.ts
+        bun run ${{ github.action_path }}/src/entrypoints/update-comment-link.ts
       env:
         REPOSITORY: ${{ github.repository }}
         PR_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
