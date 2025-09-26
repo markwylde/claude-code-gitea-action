@@ -40,13 +40,36 @@ inputs:
     required: false
     default: ""
 
+  # New Claude Code settings
+  settings:
+    description: "Path to Claude Code settings JSON file, or settings JSON string"
+    required: false
+    default: ""
+  system_prompt:
+    description: "Override system prompt"
+    required: false
+    default: ""
+  append_system_prompt:
+    description: "Append to system prompt"
+    required: false
+    default: ""
+  claude_env:
+    description: "Custom environment variables to pass to Claude Code execution (YAML multiline format)"
+    required: false
+    default: ""
+  fallback_model:
+    description: "Enable automatic fallback to specified model when default model is overloaded"
+    required: false
+    default: ""
+
   # Auth configuration
   anthropic_api_key:
-    description: "Anthropic API key (required for direct API, not needed for Bedrock/Vertex). Set to 'use-oauth' when using claude_credentials"
+    description: "Anthropic API key (required for direct API, not needed for Bedrock/Vertex)"
     required: false
-  claude_credentials:
-    description: "Claude OAuth credentials JSON for Claude AI Max subscription authentication"
+  claude_code_oauth_token:
+    description: "Claude Code OAuth token (alternative to anthropic_api_key)"
     required: false
+    default: ""
   gitea_token:
     description: "Gitea token with repo and pull request permissions (defaults to GITHUB_TOKEN)"
     required: false
@@ -56,6 +79,10 @@ inputs:
     default: "false"
   use_vertex:
     description: "Use Google Vertex AI with OIDC authentication instead of direct Anthropic API"
+    required: false
+    default: "false"
+  use_node_cache:
+    description: "Whether to use Node.js dependency caching (set to true only for Node.js projects with lock files)"
     required: false
     default: "false"
 
@@ -108,12 +135,28 @@ runs:
         GITHUB_RUN_ID: ${{ github.run_id }}
         GITEA_API_URL: ${{ env.GITHUB_SERVER_URL }}
         ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
-        CLAUDE_CREDENTIALS: ${{ inputs.claude_credentials }}
+
+    - name: Install Claude
+      if: steps.prepare.outputs.contains_trigger == 'true'
+      shell: bash
+      run: |
+        # Install Claude Code if no custom executable is provided
+        if [ -z "${{ inputs.path_to_claude_code_executable }}" ]; then
+          echo "Installing Claude Code..."
+          curl -fsSL https://claude.ai/install.sh | bash -s 1.0.117
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        else
+          echo "Using custom Claude Code executable: ${{ inputs.path_to_claude_code_executable }}"
+          # Add the directory containing the custom executable to PATH
+          CLAUDE_DIR=$(dirname "${{ inputs.path_to_claude_code_executable }}")
+          echo "$CLAUDE_DIR" >> "$GITHUB_PATH"
+        fi
+    # TODO pass claude_code_executable as input and use it here
 
     - name: Run Claude Code
       id: claude-code
       if: steps.prepare.outputs.contains_trigger == 'true'
-      uses: anthropics/claude-code-base-action@v0.0.24
+      uses: anthropics/claude-code-base-action@v0.0.63
       with:
         prompt_file: /tmp/claude-prompts/claude-prompt.txt
         allowed_tools: ${{ env.ALLOWED_TOOLS }}
@@ -124,6 +167,13 @@ runs:
         use_bedrock: ${{ inputs.use_bedrock }}
         use_vertex: ${{ inputs.use_vertex }}
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
+        claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
+        settings: ${{ inputs.settings }}
+        system_prompt: ${{ inputs.system_prompt }}
+        append_system_prompt: ${{ inputs.append_system_prompt }}
+        claude_env: ${{ inputs.claude_env }}
+        fallback_model: ${{ inputs.fallback_model }}
+        use_node_cache: ${{ inputs.use_node_cache }}
       env:
         # Core configuration
         PROMPT_FILE: /tmp/claude-prompts/claude-prompt.txt
@@ -136,7 +186,15 @@ runs:
         USE_BEDROCK: ${{ inputs.use_bedrock }}
         USE_VERTEX: ${{ inputs.use_vertex }}
         ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
-        CLAUDE_CREDENTIALS: ${{ inputs.claude_credentials }}
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
+        
+        # New settings support
+        SETTINGS: ${{ inputs.settings }}
+        SYSTEM_PROMPT: ${{ inputs.system_prompt }}
+        APPEND_SYSTEM_PROMPT: ${{ inputs.append_system_prompt }}
+        CLAUDE_ENV: ${{ inputs.claude_env }}
+        FALLBACK_MODEL: ${{ inputs.fallback_model }}
+        USE_NODE_CACHE: ${{ inputs.use_node_cache }}
 
         # GitHub token for repository access
         GITHUB_TOKEN: ${{ steps.prepare.outputs.GITHUB_TOKEN }}

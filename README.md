@@ -19,7 +19,7 @@ A Gitea action that provides a general-purpose [Claude Code](https://claude.ai/c
 
 **Requirements**: You must be a repository admin to complete these steps.
 
-1. Add `ANTHROPIC_API_KEY` or `CLAUDE_CREDENTIALS` to your repository secrets
+1. Add `ANTHROPIC_API_KEY` to your repository secrets
 2. Add `GITEA_TOKEN` to your repository secrets (a personal access token with repository read/write permissions)
 3. Copy the workflow file from [`examples/gitea-claude.yml`](./examples/gitea-claude.yml) into your repository's `.gitea/workflows/`
 
@@ -47,7 +47,6 @@ jobs:
       - uses: markwylde/claude-code-gitea-action@v1.0.5
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }} # if you want to use direct API
-          claude_credentials: ${{ secrets.CLAUDE_CREDENTIALS }} # if you have a Claude Max subscription
           gitea_token: ${{ secrets.GITEA_TOKEN }} # could be another users token (specific Claude user?)
           claude_git_name: Claude # optional
           claude_git_email: claude@anthropic.com # optional
@@ -57,8 +56,8 @@ jobs:
 
 | Input                 | Description                                                                                                                  | Required | Default                |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------- | ---------------------- |
-| `anthropic_api_key`   | Anthropic API key (required for direct API, not needed for Bedrock/Vertex). Set to 'use-oauth' when using claude_credentials | No\*     | -                      |
-| `claude_credentials`  | Claude OAuth credentials JSON for Claude AI Max subscription authentication                                                  | No       | -                      |
+| `anthropic_api_key`   | Anthropic API key (required for direct API, not needed for Bedrock/Vertex) | No\*     | -                      |
+| `claude_code_oauth_token` | Claude Code OAuth token (alternative to anthropic_api_key) | No       | -                      |
 | `direct_prompt`       | Direct prompt for Claude to execute automatically without needing a trigger (for automated workflows)                        | No       | -                      |
 | `timeout_minutes`     | Timeout in minutes for execution                                                                                             | No       | `30`                   |
 | `gitea_token`         | Gitea token for Claude to operate with. **Only include this if you're connecting a custom GitHub app of your own!**          | No       | -                      |
@@ -77,45 +76,6 @@ jobs:
 \*Required when using direct Anthropic API (default and when not using Bedrock or Vertex)
 
 > **Note**: This action is currently in beta. Features and APIs may change as we continue to improve the integration.
-
-## Claude Max Authentication
-
-This action supports authentication using Claude Max OAuth credentials. This allows users with Claude Max subscriptions to use their existing authentication.
-
-### Setup
-
-1. **Get OAuth Credentials**: Use Claude Code to generate OAuth credentials:
-
-   ```
-   /auth-setup
-   ```
-
-2. **Add Credentials to Repository**: Add the generated JSON credentials as a repository secret named `CLAUDE_CREDENTIALS`.
-
-It should look like this:
-
-```json
-{
-  "claudeAiOauth": {
-    "accessToken": "sk-ant-xxx",
-    "refreshToken": "sk-ant-xxx",
-    "expiresAt": 1748707000000,
-    "scopes": ["user:inference", "user:profile"]
-  }
-}
-```
-
-3. **Configure Workflow**: Set up your workflow to use OAuth authentication:
-
-```yaml
-- uses: markwylde/claude-code-gitea-action@v1.0.5
-  with:
-    anthropic_api_key: "use-oauth"
-    claude_credentials: ${{ secrets.CLAUDE_CREDENTIALS }}
-    gitea_token: ${{ secrets.GITEA_TOKEN }}
-```
-
-When `anthropic_api_key` is set to `'use-oauth'`, the action will use the OAuth credentials provided in `claude_credentials` instead of a direct API key.
 
 ## Gitea Configuration
 
@@ -311,10 +271,33 @@ Use a specific Claude model:
 
 ## Cloud Providers
 
-You can authenticate with Claude using any of these three methods:
+You can authenticate with Claude using any of these methods:
 
-1. Direct Anthropic API (default)
-2. Anthropic OAuth credentials (Claude Max subscription)
+1. **Direct Anthropic API** (default) - Use your Anthropic API key
+2. **Claude Code OAuth Token** - Use OAuth token from Claude Code application
+
+### Using Claude Code OAuth Token
+
+If you have access to [Claude Code](https://claude.ai/code), you can use OAuth authentication instead of an API key:
+
+1. **Generate OAuth Token**: run the following command and follow instructions:
+   ```
+   claude setup-token
+   ```
+   This will generate an OAuth token that you can use for authentication.
+
+2. **Add Token to Repository**: Add the generated token as a repository secret named `CLAUDE_CODE_OAUTH_TOKEN`.
+
+3. **Configure Workflow**: Use the OAuth token in your workflow:
+
+```yaml
+- uses: markwylde/claude-code-gitea-action@v1.0.5
+  with:
+    claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    gitea_token: ${{ secrets.GITEA_TOKEN }}
+```
+
+When `claude_code_oauth_token` is provided, it will be used instead of `anthropic_api_key` for authentication.
 
 ## Security
 
