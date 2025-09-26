@@ -85,6 +85,31 @@ This action has been enhanced to work with Gitea installations. The main differe
 
 2. **API URL Configuration**: You must specify your Gitea server URL using the `gitea_api_url` input.
 
+3. **Custom Server URL**: For Gitea instances running in containers, you can override link generation using the `GITEA_SERVER_URL` environment variable.
+
+### Custom Server URL Configuration
+
+When running Gitea in containers, the action may generate links using internal container URLs (e.g., `http://gitea:3000`) instead of your public URL. To fix this, set the `GITEA_SERVER_URL` environment variable:
+
+```yaml
+- uses: markwylde/claude-code-gitea-action@v1.0.5
+  with:
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    gitea_token: ${{ secrets.GITEA_TOKEN }}
+  env:
+    # Override the internal container URL with your public URL
+    GITEA_SERVER_URL: https://gitea.example.com
+```
+
+**How it works:**
+- The action first checks for `GITEA_SERVER_URL` (user-configurable)
+- Falls back to `GITHUB_SERVER_URL` (automatically set by Gitea Actions)
+- Uses `https://github.com` as final fallback
+
+This ensures that all links in Claude's comments (job runs, branches, etc.) point to your public Gitea instance instead of internal container addresses.
+
+See [`examples/gitea-custom-url.yml`](./examples/gitea-custom-url.yml) for a complete example.
+
 ### Gitea Setup Notes
 
 - Use a Gitea personal access token "GITEA_TOKEN"
