@@ -8,6 +8,7 @@ import {
   isPullRequestReviewEvent,
   isPullRequestReviewCommentEvent,
 } from "../context";
+import type { IssuesLabeledEvent } from "@octokit/webhooks-types";
 import type { ParsedGitHubContext } from "../context";
 
 export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
@@ -37,6 +38,26 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
 
     if (triggerUser && assigneeUsername === triggerUser) {
       console.log(`Issue assigned to trigger user '${triggerUser}'`);
+      return true;
+    }
+  }
+
+  // Check for issue label trigger
+  if (isIssuesEvent(context) && context.eventAction === "labeled") {
+    const triggerLabel = context.inputs.labelTrigger?.trim();
+    const appliedLabel = (context.payload as IssuesLabeledEvent).label?.name
+      ?.trim();
+
+    console.log(
+      `Checking label trigger: expected='${triggerLabel}', applied='${appliedLabel}'`,
+    );
+
+    if (
+      triggerLabel &&
+      appliedLabel &&
+      triggerLabel.localeCompare(appliedLabel, undefined, { sensitivity: "accent" }) === 0
+    ) {
+      console.log(`Issue labeled with trigger label '${triggerLabel}'`);
       return true;
     }
   }

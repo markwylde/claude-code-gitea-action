@@ -141,14 +141,16 @@ export function updateCommentBody(input: CommentUpdateInput): string {
 
     if (branchLink) {
       // Extract the branch URL from the link
-      const urlMatch = branchLink.match(/\((https:\/\/.*)\)/);
+      const urlMatch = branchLink.match(/\((https?:\/\/[^\)]+)\)/);
       if (urlMatch && urlMatch[1]) {
         branchUrl = urlMatch[1];
       }
 
       // Extract branch name from link if not provided
       if (!finalBranchName) {
-        const branchNameMatch = branchLink.match(/tree\/([^"'\)]+)/);
+        const branchNameMatch = branchLink.match(
+          /(?:tree|src\/branch)\/([^"'\)\s]+)/,
+        );
         if (branchNameMatch) {
           finalBranchName = branchNameMatch[1];
         }
@@ -157,10 +159,17 @@ export function updateCommentBody(input: CommentUpdateInput): string {
 
     // If we don't have a URL yet but have a branch name, construct it
     if (!branchUrl && finalBranchName) {
-      // Extract owner/repo from jobUrl
-      const repoMatch = jobUrl.match(/github\.com\/([^\/]+)\/([^\/]+)\//);
-      if (repoMatch) {
-        branchUrl = `${GITEA_SERVER_URL}/${repoMatch[1]}/${repoMatch[2]}/src/branch/${finalBranchName}`;
+      try {
+        const parsedJobUrl = new URL(jobUrl);
+        const segments = parsedJobUrl.pathname
+          .split("/")
+          .filter((segment) => segment);
+        const [owner, repo] = segments;
+        if (owner && repo) {
+          branchUrl = `${GITEA_SERVER_URL}/${owner}/${repo}/src/branch/${finalBranchName}`;
+        }
+      } catch (error) {
+        console.warn(`Failed to derive branch URL from job URL: ${error}`);
       }
     }
 

@@ -1,6 +1,4 @@
 import { GITEA_SERVER_URL } from "../../api/config";
-import { readFileSync } from "fs";
-import { join } from "path";
 
 function getSpinnerHtml(): string {
   return `<img src="https://raw.githubusercontent.com/markwylde/claude-code-gitea-action/refs/heads/gitea/assets/spinner.gif" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />`;

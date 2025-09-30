@@ -29,3 +29,7 @@ export const GITEA_SERVER_URL = getServerUrl();
 
 export const GITEA_API_URL =
   process.env.GITEA_API_URL || deriveApiUrl(GITEA_SERVER_URL);
+
+// Backwards-compatible aliases for legacy GitHub-specific naming
+export const GITHUB_SERVER_URL = GITEA_SERVER_URL;
+export const GITHUB_API_URL = GITEA_API_URL;

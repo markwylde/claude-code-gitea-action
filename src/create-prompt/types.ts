@@ -66,7 +66,7 @@ type IssueAssignedEvent = {
   issueNumber: string;
   baseBranch: string;
   claudeBranch?: string;
-  assigneeTrigger: string;
+  assigneeTrigger?: string;
 };
 
 type IssueLabeledEvent = {

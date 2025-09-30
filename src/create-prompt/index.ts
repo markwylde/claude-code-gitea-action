@@ -19,7 +19,7 @@ import {
 } from "../github/context";
 import type { ParsedGitHubContext } from "../github/context";
 import type { CommonFields, PreparedContext, EventData } from "./types";
-import { GITEA_SERVER_URL } from "../github/api/config";
+import type { Mode, ModeContext } from "../modes/types";
 export type { CommonFields, PreparedContext } from "./types";
 
 const BASE_ALLOWED_TOOLS = [
@@ -62,37 +62,74 @@ const BASE_ALLOWED_TOOLS = [
 ];
 const DISALLOWED_TOOLS = ["WebSearch", "WebFetch"];
 
-export function buildAllowedToolsString(
-  customAllowedTools?: string[],
-): string {
-  let baseTools = [...BASE_ALLOWED_TOOLS];
+const ACTIONS_ALLOWED_TOOLS = [
+  "mcp__github_actions__get_ci_status",
+  "mcp__github_actions__get_workflow_run_details",
+  "mcp__github_actions__download_job_log",
+];
 
-  let allAllowedTools = baseTools.join(",");
-  if (customAllowedTools && customAllowedTools.length > 0) {
-    allAllowedTools = `${allAllowedTools},${customAllowedTools.join(",")}`;
+const COMMIT_SIGNING_TOOLS = [
+  "mcp__github_file_ops__commit_files",
+  "mcp__github_file_ops__delete_files",
+  "mcp__github_file_ops__update_claude_comment",
+];
+
+function normalizeToolList(input?: string | string[]): string[] {
+  if (!input) {
+    return [];
   }
-  return allAllowedTools;
+
+  const tools = Array.isArray(input) ? input : input.split(",");
+  return tools
+    .map((tool) => tool.trim())
+    .filter((tool): tool is string => tool.length > 0);
+}
+
+export function buildAllowedToolsString(
+  customAllowedTools?: string | string[],
+  includeActionsReadTools = false,
+  useCommitSigning = false,
+): string {
+  const allowedTools = new Set<string>(BASE_ALLOWED_TOOLS);
+
+  if (includeActionsReadTools) {
+    for (const tool of ACTIONS_ALLOWED_TOOLS) {
+      allowedTools.add(tool);
+    }
+  }
+
+  if (useCommitSigning) {
+    for (const tool of COMMIT_SIGNING_TOOLS) {
+      allowedTools.add(tool);
+    }
+  }
+
+  for (const tool of normalizeToolList(customAllowedTools)) {
+    allowedTools.add(tool);
+  }
+
+  return Array.from(allowedTools).join(",");
 }
 
 export function buildDisallowedToolsString(
-  customDisallowedTools?: string[],
-  allowedTools?: string[],
+  customDisallowedTools?: string | string[],
+  allowedTools?: string | string[],
 ): string {
   let disallowedTools = [...DISALLOWED_TOOLS];
 
   // If user has explicitly allowed some hardcoded disallowed tools, remove them from disallowed list
-  if (allowedTools && allowedTools.length > 0) {
-    disallowedTools = disallowedTools.filter(
-      (tool) => !allowedTools.includes(tool),
-    );
+  const allowedList = normalizeToolList(allowedTools);
+  if (allowedList.length > 0) {
+    disallowedTools = disallowedTools.filter((tool) => !allowedList.includes(tool));
   }
 
   let allDisallowedTools = disallowedTools.join(",");
-  if (customDisallowedTools && customDisallowedTools.length > 0) {
+  const customList = normalizeToolList(customDisallowedTools);
+  if (customList.length > 0) {
     if (allDisallowedTools) {
-      allDisallowedTools = `${allDisallowedTools},${customDisallowedTools.join(",")}`;
+      allDisallowedTools = `${allDisallowedTools},${customList.join(",")}`;
     } else {
-      allDisallowedTools = customDisallowedTools.join(",");
+      allDisallowedTools = customList.join(",");
     }
   }
   return allDisallowedTools;
@@ -240,6 +277,8 @@ export function prepareContext(
         throw new Error(
           "ISSUE_NUMBER is required for issue_comment event for issues",
         );
+      } else if (!claudeBranch) {
+        throw new Error("CLAUDE_BRANCH is required for issue_comment event");
       }
 
       eventData = {
@@ -249,7 +288,7 @@ export function prepareContext(
         baseBranch,
         issueNumber,
         commentBody,
-        ...(claudeBranch && { claudeBranch }),
+        claudeBranch,
       };
       break;
 
@@ -266,6 +305,9 @@ export function prepareContext(
       if (!baseBranch) {
         throw new Error("BASE_BRANCH is required for issues event");
       }
+      if (!claudeBranch) {
+        throw new Error("CLAUDE_BRANCH is required for issues event");
+      }
 
       if (eventAction === "assigned") {
         if (!assigneeTrigger && !directPrompt) {
@@ -279,8 +321,8 @@ export function prepareContext(
           isPR: false,
           issueNumber,
           baseBranch,
-          assigneeTrigger,
-          ...(claudeBranch && { claudeBranch }),
+          ...(assigneeTrigger && { assigneeTrigger }),
+          claudeBranch,
         };
       } else if (eventAction === "labeled") {
         if (!labelTrigger) {
@@ -302,7 +344,7 @@ export function prepareContext(
           isPR: false,
           issueNumber,
           baseBranch,
-          ...(claudeBranch && { claudeBranch }),
+          claudeBranch,
         };
       } else {
         throw new Error(`Unsupported issue action: ${eventAction}`);
@@ -393,64 +435,6 @@ export function getEventTypeAndContext(envVars: PreparedContext): {
   }
 }
 
-function getCommitInstructions(
-  eventData: EventData,
-  githubData: FetchDataResult,
-  context: PreparedContext,
-  useCommitSigning: boolean,
-): string {
-  const coAuthorLine =
-    (githubData.triggerDisplayName ?? context.triggerUsername !== "Unknown")
-      ? `Co-authored-by: ${githubData.triggerDisplayName ?? context.triggerUsername} <${context.triggerUsername}@users.noreply.github.com>`
-      : "";
-
-  if (useCommitSigning) {
-    if (eventData.isPR && !eventData.claudeBranch) {
-      return `
-      - Push directly using mcp__github_file_ops__commit_files to the existing branch (works for both new and existing files).
-      - Use mcp__github_file_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
-      - When pushing changes with this tool and the trigger user is not "Unknown", include a Co-authored-by trailer in the commit message.
-      - Use: "${coAuthorLine}"`;
-    } else {
-      return `
-      - You are already on the correct branch (${eventData.claudeBranch || "the PR branch"}). Do not create a new branch.
-      - Push changes directly to the current branch using mcp__github_file_ops__commit_files (works for both new and existing files)
-      - Use mcp__github_file_ops__commit_files to commit files atomically in a single commit (supports single or multiple files).
-      - When pushing changes and the trigger user is not "Unknown", include a Co-authored-by trailer in the commit message.
-      - Use: "${coAuthorLine}"`;
-    }
-  } else {
-    // Non-signing instructions
-    if (eventData.isPR && !eventData.claudeBranch) {
-      return `
-      - Use git commands via the Bash tool to commit and push your changes:
-        - Stage files: Bash(git add <files>)
-        - Commit with a descriptive message: Bash(git commit -m "<message>")
-        ${
-          coAuthorLine
-            ? `- When committing and the trigger user is not "Unknown", include a Co-authored-by trailer:
-          Bash(git commit -m "<message>\\n\\n${coAuthorLine}")`
-            : ""
-        }
-        - Push to the remote: Bash(git push origin HEAD)`;
-    } else {
-      const branchName = eventData.claudeBranch || eventData.baseBranch;
-      return `
-      - You are already on the correct branch (${eventData.claudeBranch || "the PR branch"}). Do not create a new branch.
-      - Use git commands via the Bash tool to commit and push your changes:
-        - Stage files: Bash(git add <files>)
-        - Commit with a descriptive message: Bash(git commit -m "<message>")
-        ${
-          coAuthorLine
-            ? `- When committing and the trigger user is not "Unknown", include a Co-authored-by trailer:
-          Bash(git commit -m "<message>\\n\\n${coAuthorLine}")`
-            : ""
-        }
-        - Push to the remote: Bash(git push origin ${branchName})`;
-    }
-  }
-}
-
 function substitutePromptVariables(
   template: string,
   context: PreparedContext,
@@ -517,7 +501,7 @@ function substitutePromptVariables(
 export function generatePrompt(
   context: PreparedContext,
   githubData: FetchDataResult,
-  useCommitSigning: boolean,
+  useCommitSigning = false,
 ): string {
   if (context.overridePrompt) {
     return substitutePromptVariables(
@@ -526,6 +510,8 @@ export function generatePrompt(
       githubData,
     );
   }
+
+  const triggerDisplayName = context.triggerUsername ?? "Unknown";
 
   const {
     contextData,
@@ -594,7 +580,7 @@ ${
 }
 <claude_comment_id>${context.claudeCommentId}</claude_comment_id>
 <trigger_username>${context.triggerUsername ?? "Unknown"}</trigger_username>
-<trigger_display_name>${githubData.triggerDisplayName ?? context.triggerUsername ?? "Unknown"}</trigger_display_name>
+<trigger_display_name>${triggerDisplayName}</trigger_display_name>
 <trigger_phrase>${context.triggerPhrase}</trigger_phrase>
 ${
   (eventData.eventName === "issue_comment" ||

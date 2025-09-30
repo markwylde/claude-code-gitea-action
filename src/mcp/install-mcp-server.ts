@@ -1,11 +1,24 @@
 import * as core from "@actions/core";
+import type { ParsedGitHubContext } from "../github/context";
 
-export async function prepareMcpConfig(
-  githubToken: string,
-  owner: string,
-  repo: string,
-  branch: string,
-): Promise<string> {
+export type PrepareMcpConfigOptions = {
+  githubToken: string;
+  owner: string;
+  repo: string;
+  branch: string;
+  baseBranch?: string;
+  allowedTools?: string[];
+  context?: ParsedGitHubContext;
+  overrideConfig?: string;
+  additionalMcpConfig?: string;
+};
+
+export async function prepareMcpConfig({
+  githubToken,
+  owner,
+  repo,
+  branch,
+}: PrepareMcpConfigOptions): Promise<string> {
   console.log("[MCP-INSTALL] Preparing MCP configuration...");
   console.log(`[MCP-INSTALL] Owner: ${owner}`);
   console.log(`[MCP-INSTALL] Repo: ${repo}`);

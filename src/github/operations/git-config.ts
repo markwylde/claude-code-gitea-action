@@ -7,7 +7,7 @@
 
 import { $ } from "bun";
 import type { ParsedGitHubContext } from "../context";
-import { GITHUB_SERVER_URL } from "../api/config";
+import { GITEA_SERVER_URL } from "../api/config";
 
 type GitUser = {
   login: string;
@@ -22,7 +22,7 @@ export async function configureGitAuth(
   console.log("Configuring git authentication for non-signing mode");
 
   // Determine the noreply email domain based on GITHUB_SERVER_URL
-  const serverUrl = new URL(GITHUB_SERVER_URL);
+  const serverUrl = new URL(GITEA_SERVER_URL);
   const noreplyDomain =
     serverUrl.hostname === "github.com"
       ? "users.noreply.github.com"
@@ -46,7 +46,7 @@ export async function configureGitAuth(
   // Remove the authorization header that actions/checkout sets
   console.log("Removing existing git authentication headers...");
   try {
-    await $`git config --unset-all http.${GITHUB_SERVER_URL}/.extraheader`;
+    await $`git config --unset-all http.${GITEA_SERVER_URL}/.extraheader`;
     console.log("✓ Removed existing authentication headers");
   } catch (e) {
     console.log("No existing authentication headers to remove");

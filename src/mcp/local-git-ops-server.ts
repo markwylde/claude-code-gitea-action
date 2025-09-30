@@ -3,8 +3,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { readFile, writeFile } from "fs/promises";
-import { join } from "path";
 import { execSync } from "child_process";
 
 // Get repository information from environment variables

@@ -942,7 +942,7 @@ server.tool(
         endpoint += `?style=${style}`;
       }
 
-      const result = await giteaRequest(endpoint, "POST");
+      await giteaRequest(endpoint, "POST");
 
       return {
         content: [

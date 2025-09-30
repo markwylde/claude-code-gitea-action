@@ -18,6 +18,7 @@ import { createPrompt } from "../create-prompt";
 import { createClient } from "../github/api/client";
 import { fetchGitHubData } from "../github/data/fetcher";
 import { parseGitHubContext } from "../github/context";
+import { getMode } from "../modes/registry";
 
 async function run() {
   try {
@@ -54,9 +55,14 @@ async function run() {
     // Step 5: Check if actor is human
     await checkHumanActor(client.api, context);
 
-    // Step 6: Create initial tracking comment
-    const commentId = await createInitialComment(client.api, context);
-    core.setOutput("claude_comment_id", commentId.toString());
+    const mode = getMode(context.inputs.mode);
+
+    // Step 6: Create initial tracking comment (if required by mode)
+    let commentId: number | undefined;
+    if (mode.shouldCreateTrackingComment()) {
+      commentId = await createInitialComment(client.api, context);
+      core.setOutput("claude_comment_id", commentId!.toString());
+    }
 
     // Step 7: Fetch GitHub data (once for both branch setup and prompt creation)
     const githubData = await fetchGitHubData({
@@ -74,7 +80,7 @@ async function run() {
     }
 
     // Step 9: Update initial comment with branch link (only if a claude branch was created)
-    if (branchInfo.claudeBranch) {
+    if (commentId && branchInfo.claudeBranch) {
       await updateTrackingComment(
         client,
         context,
@@ -84,21 +90,24 @@ async function run() {
     }
 
     // Step 10: Create prompt file
-    await createPrompt(
+    const modeContext = mode.prepareContext(context, {
       commentId,
-      branchInfo.baseBranch,
-      branchInfo.claudeBranch,
-      githubData,
-      context,
-    );
+      baseBranch: branchInfo.baseBranch,
+      claudeBranch: branchInfo.claudeBranch,
+    });
+
+    await createPrompt(mode, modeContext, githubData, context);
 
     // Step 11: Get MCP configuration
-    const mcpConfig = await prepareMcpConfig(
+    const mcpConfig = await prepareMcpConfig({
       githubToken,
-      context.repository.owner,
-      context.repository.repo,
-      branchInfo.currentBranch,
-    );
+      owner: context.repository.owner,
+      repo: context.repository.repo,
+      branch: branchInfo.currentBranch,
+      baseBranch: branchInfo.baseBranch,
+      allowedTools: context.inputs.allowedTools,
+      context,
+    });
     core.setOutput("mcp_config", mcpConfig);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
