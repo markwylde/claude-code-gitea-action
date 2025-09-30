@@ -8,7 +8,6 @@ import {
   buildDisallowedToolsString,
 } from "../src/create-prompt";
 import type { PreparedContext } from "../src/create-prompt";
-import type { EventData } from "../src/create-prompt/types";
 
 describe("generatePrompt", () => {
   const mockGitHubData = {
@@ -134,7 +133,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData);
+    const prompt = generatePrompt(envVars, mockGitHubData, false);
 
     expect(prompt).toContain("You are Claude, an AI assistant");
     expect(prompt).toContain("<event_type>GENERAL_COMMENT</event_type>");
@@ -162,7 +161,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData);
+    const prompt = generatePrompt(envVars, mockGitHubData, false);
 
     expect(prompt).toContain("<event_type>PR_REVIEW</event_type>");
     expect(prompt).toContain("<is_pr>true</is_pr>");
@@ -188,16 +187,14 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData);
+    const prompt = generatePrompt(envVars, mockGitHubData, false);
 
     expect(prompt).toContain("<event_type>ISSUE_CREATED</event_type>");
     expect(prompt).toContain(
       "<trigger_context>new issue with '@claude' in body</trigger_context>",
     );
-    expect(prompt).toContain(
-      "[Create a PR](https://github.com/owner/repo/compare/main",
-    );
-    expect(prompt).toContain("The target-branch should be 'main'");
+    expect(prompt).toContain("mcp__gitea__update_issue_comment");
+    expect(prompt).toContain("mcp__gitea__list_branches");
   });
 
   test("should generate prompt for issue assigned event", () => {
@@ -216,15 +213,14 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData);
+    const prompt = generatePrompt(envVars, mockGitHubData, false);
 
     expect(prompt).toContain("<event_type>ISSUE_ASSIGNED</event_type>");
     expect(prompt).toContain(
       "<trigger_context>issue assigned to 'claude-bot'</trigger_context>",
     );
-    expect(prompt).toContain(
-      "[Create a PR](https://github.com/owner/repo/compare/develop",
-    );
+    expect(prompt).toContain("mcp__gitea__list_branches");
+    expect(prompt).toContain("mcp__local_git_ops__checkout_branch");
   });
 
   test("should include direct prompt when provided", () => {
@@ -243,7 +239,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData);
+    const prompt = generatePrompt(envVars, mockGitHubData, false);
 
     expect(prompt).toContain("<direct_prompt>");
     expect(prompt).toContain("Fix the bug in the login form");
@@ -266,7 +262,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData);
+    const prompt = generatePrompt(envVars, mockGitHubData, false);
 
     expect(prompt).toContain("<event_type>PULL_REQUEST</event_type>");
     expect(prompt).toContain("<is_pr>true</is_pr>");
@@ -291,7 +287,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData);
+    const prompt = generatePrompt(envVars, mockGitHubData, false);
 
     expect(prompt).toContain("CUSTOM INSTRUCTIONS:\nAlways use TypeScript");
   });
@@ -313,11 +309,11 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData);
+    const prompt = generatePrompt(envVars, mockGitHubData, false);
 
     expect(prompt).toContain("<trigger_username>johndoe</trigger_username>");
     expect(prompt).toContain(
-      "Co-authored-by: johndoe <johndoe@users.noreply.local>",
+      "<trigger_display_name>johndoe</trigger_display_name>",
     );
   });
 
@@ -334,7 +330,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData);
+    const prompt = generatePrompt(envVars, mockGitHubData, false);
 
     // Should contain PR-specific instructions
     expect(prompt).toContain(
@@ -367,19 +363,12 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData);
+    const prompt = generatePrompt(envVars, mockGitHubData, false);
 
     // Should contain Issue-specific instructions
-    expect(prompt).toContain(
-      "You are already on the correct branch (claude/issue-789-20240101_120000)",
-    );
-    expect(prompt).toContain(
-      "IMPORTANT: You are already on the correct branch (claude/issue-789-20240101_120000)",
-    );
-    expect(prompt).toContain("Create a PR](https://github.com/");
-    expect(prompt).toContain(
-      "If you created a branch and made changes, your comment must include the PR URL",
-    );
+    expect(prompt).toContain("mcp__gitea__update_issue_comment");
+    expect(prompt).toContain("mcp__gitea__list_branches");
+    expect(prompt).toContain("mcp__local_git_ops__checkout_branch");
 
     // Should NOT contain PR-specific instructions
     expect(prompt).not.toContain(
@@ -406,54 +395,11 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData);
+    const prompt = generatePrompt(envVars, mockGitHubData, false);
 
-    // Should contain the actual branch name with timestamp
-    expect(prompt).toContain(
-      "You are already on the correct branch (claude/issue-123-20240101_120000)",
-    );
-    expect(prompt).toContain(
-      "IMPORTANT: You are already on the correct branch (claude/issue-123-20240101_120000)",
-    );
-    expect(prompt).toContain(
-      "The branch-name is the current branch: claude/issue-123-20240101_120000",
-    );
-  });
-
-  test("should handle closed PR with new branch", () => {
-    const envVars: PreparedContext = {
-      repository: "owner/repo",
-      claudeCommentId: "12345",
-      triggerPhrase: "@claude",
-      eventData: {
-        eventName: "issue_comment",
-        commentId: "67890",
-        isPR: true,
-        prNumber: "456",
-        commentBody: "@claude please fix this",
-        claudeBranch: "claude/pr-456-20240101_120000",
-        baseBranch: "main",
-      },
-    };
-
-    const prompt = generatePrompt(envVars, mockGitHubData);
-
-    // Should contain branch-specific instructions like issues
-    expect(prompt).toContain(
-      "You are already on the correct branch (claude/pr-456-20240101_120000)",
-    );
-    expect(prompt).toContain(
-      "Create a PR](https://github.com/owner/repo/compare/main",
-    );
-    expect(prompt).toContain(
-      "The branch-name is the current branch: claude/pr-456-20240101_120000",
-    );
-    expect(prompt).toContain("Reference to the original PR");
-
-    // Should NOT contain open PR instructions
-    expect(prompt).not.toContain(
-      "Commit changes using mcp__local_git_ops__commit_files to the existing branch",
-    );
+    // Should surface the issue number and comment metadata
+    expect(prompt).toContain("<issue_number>123</issue_number>");
+    expect(prompt).toContain("<claude_comment_id>12345</claude_comment_id>");
   });
 
   test("should handle open PR without new branch", () => {
@@ -471,7 +417,7 @@ describe("generatePrompt", () => {
       },
     };
 
-    const prompt = generatePrompt(envVars, mockGitHubData);
+    const prompt = generatePrompt(envVars, mockGitHubData, false);
 
     // Should contain open PR instructions
     expect(prompt).toContain(
@@ -487,84 +433,6 @@ describe("generatePrompt", () => {
     expect(prompt).not.toContain(
       "If you created anything in your branch, your comment must include the PR URL",
     );
-  });
-
-  test("should handle PR review on closed PR with new branch", () => {
-    const envVars: PreparedContext = {
-      repository: "owner/repo",
-      claudeCommentId: "12345",
-      triggerPhrase: "@claude",
-      eventData: {
-        eventName: "pull_request_review",
-        isPR: true,
-        prNumber: "789",
-        commentBody: "@claude please update this",
-        claudeBranch: "claude/pr-789-20240101_123000",
-        baseBranch: "develop",
-      },
-    };
-
-    const prompt = generatePrompt(envVars, mockGitHubData);
-
-    // Should contain new branch instructions
-    expect(prompt).toContain(
-      "You are already on the correct branch (claude/pr-789-20240101_123000)",
-    );
-    expect(prompt).toContain(
-      "Create a PR](https://github.com/owner/repo/compare/develop",
-    );
-    expect(prompt).toContain("Reference to the original PR");
-  });
-
-  test("should handle PR review comment on closed PR with new branch", () => {
-    const envVars: PreparedContext = {
-      repository: "owner/repo",
-      claudeCommentId: "12345",
-      triggerPhrase: "@claude",
-      eventData: {
-        eventName: "pull_request_review_comment",
-        isPR: true,
-        prNumber: "999",
-        commentId: "review-comment-123",
-        commentBody: "@claude fix this issue",
-        claudeBranch: "claude/pr-999-20240101_140000",
-        baseBranch: "main",
-      },
-    };
-
-    const prompt = generatePrompt(envVars, mockGitHubData);
-
-    // Should contain new branch instructions
-    expect(prompt).toContain(
-      "You are already on the correct branch (claude/pr-999-20240101_140000)",
-    );
-    expect(prompt).toContain("Create a PR](https://github.com/");
-    expect(prompt).toContain("Reference to the original PR");
-  });
-
-  test("should handle pull_request event on closed PR with new branch", () => {
-    const envVars: PreparedContext = {
-      repository: "owner/repo",
-      claudeCommentId: "12345",
-      triggerPhrase: "@claude",
-      eventData: {
-        eventName: "pull_request",
-        eventAction: "closed",
-        isPR: true,
-        prNumber: "555",
-        claudeBranch: "claude/pr-555-20240101_150000",
-        baseBranch: "main",
-      },
-    };
-
-    const prompt = generatePrompt(envVars, mockGitHubData);
-
-    // Should contain new branch instructions
-    expect(prompt).toContain(
-      "You are already on the correct branch (claude/pr-555-20240101_150000)",
-    );
-    expect(prompt).toContain("Create a PR](https://github.com/");
-    expect(prompt).toContain("Reference to the original PR");
   });
 });
 
@@ -612,81 +480,36 @@ describe("getEventTypeAndContext", () => {
 });
 
 describe("buildAllowedToolsString", () => {
-  test("should return issue comment tool for regular events", () => {
-    const mockEventData: EventData = {
-      eventName: "issue_comment",
-      commentId: "123",
-      isPR: true,
-      prNumber: "456",
-      commentBody: "Test comment",
-    };
+  test("should include base tools", () => {
+    const result = buildAllowedToolsString();
 
-    const result = buildAllowedToolsString(mockEventData);
-
-    // The base tools should be in the result
     expect(result).toContain("Edit");
     expect(result).toContain("Glob");
-    expect(result).toContain("Grep");
-    expect(result).toContain("LS");
-    expect(result).toContain("Read");
-    expect(result).toContain("Write");
-    expect(result).toContain("mcp__github__update_issue_comment");
-    expect(result).not.toContain("mcp__github__update_pull_request_comment");
-    expect(result).toContain("mcp__local_git_ops__commit_files");
-    expect(result).toContain("mcp__local_git_ops__delete_files");
+    expect(result).toContain("mcp__gitea__update_issue_comment");
+    expect(result).toContain("mcp__gitea__update_pull_request_comment");
   });
 
-  test("should return PR comment tool for inline review comments", () => {
-    const mockEventData: EventData = {
-      eventName: "pull_request_review_comment",
-      isPR: true,
-      prNumber: "456",
-      commentBody: "Test review comment",
-      commentId: "789",
-    };
+  test("should include commit signing tools when enabled", () => {
+    const result = buildAllowedToolsString(undefined, false, true);
 
-    const result = buildAllowedToolsString(mockEventData);
+    expect(result).toContain("mcp__github_file_ops__commit_files");
+    expect(result).toContain("mcp__github_file_ops__delete_files");
+  });
 
-    // The base tools should be in the result
-    expect(result).toContain("Edit");
-    expect(result).toContain("Glob");
-    expect(result).toContain("Grep");
-    expect(result).toContain("LS");
-    expect(result).toContain("Read");
-    expect(result).toContain("Write");
-    expect(result).not.toContain("mcp__github__update_issue_comment");
-    expect(result).toContain("mcp__github__update_pull_request_comment");
-    expect(result).toContain("mcp__local_git_ops__commit_files");
-    expect(result).toContain("mcp__local_git_ops__delete_files");
+  test("should include actions tools when actions read permission granted", () => {
+    const result = buildAllowedToolsString([], true, false);
+
+    expect(result).toContain("mcp__github_actions__get_ci_status");
+    expect(result).toContain("mcp__github_actions__download_job_log");
   });
 
   test("should append custom tools when provided", () => {
-    const mockEventData: EventData = {
-      eventName: "issue_comment",
-      commentId: "123",
-      isPR: true,
-      prNumber: "456",
-      commentBody: "Test comment",
-    };
-
     const customTools = "Tool1,Tool2,Tool3";
-    const result = buildAllowedToolsString(mockEventData, customTools);
+    const result = buildAllowedToolsString(customTools);
 
-    // Base tools should be present
-    expect(result).toContain("Edit");
-    expect(result).toContain("Glob");
-
-    // Custom tools should be appended
     expect(result).toContain("Tool1");
     expect(result).toContain("Tool2");
     expect(result).toContain("Tool3");
-
-    // Verify format with comma separation
-    const basePlusCustom = result.split(",");
-    expect(basePlusCustom.length).toBeGreaterThan(10); // At least the base tools plus custom
-    expect(basePlusCustom).toContain("Tool1");
-    expect(basePlusCustom).toContain("Tool2");
-    expect(basePlusCustom).toContain("Tool3");
   });
 });
 

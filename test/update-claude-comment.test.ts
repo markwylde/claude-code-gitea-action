@@ -1,12 +1,11 @@
 import { describe, test, expect, jest, beforeEach } from "bun:test";
-import { Octokit } from "@octokit/rest";
 import {
   updateClaudeComment,
   type UpdateClaudeCommentParams,
 } from "../src/github/operations/comments/update-claude-comment";
 
 describe("updateClaudeComment", () => {
-  let mockOctokit: Octokit;
+  let mockOctokit: any;
 
   beforeEach(() => {
     mockOctokit = {
@@ -18,7 +17,7 @@ describe("updateClaudeComment", () => {
           updateReviewComment: jest.fn(),
         },
       },
-    } as any as Octokit;
+    };
   });
 
   test("should update issue comment successfully", async () => {
@@ -31,7 +30,6 @@ describe("updateClaudeComment", () => {
       },
     };
 
-    // @ts-expect-error Mock implementation doesn't match full type signature
     mockOctokit.rest.issues.updateComment = jest
       .fn()
       .mockResolvedValue(mockResponse);
@@ -70,7 +68,6 @@ describe("updateClaudeComment", () => {
       },
     };
 
-    // @ts-expect-error Mock implementation doesn't match full type signature
     mockOctokit.rest.issues.updateComment = jest
       .fn()
       .mockResolvedValue(mockResponse);
@@ -109,7 +106,6 @@ describe("updateClaudeComment", () => {
       },
     };
 
-    // @ts-expect-error Mock implementation doesn't match full type signature
     mockOctokit.rest.pulls.updateReviewComment = jest
       .fn()
       .mockResolvedValue(mockResponse);
@@ -151,11 +147,9 @@ describe("updateClaudeComment", () => {
       },
     };
 
-    // @ts-expect-error Mock implementation doesn't match full type signature
     mockOctokit.rest.pulls.updateReviewComment = jest
       .fn()
       .mockRejectedValue(mockError);
-    // @ts-expect-error Mock implementation doesn't match full type signature
     mockOctokit.rest.issues.updateComment = jest
       .fn()
       .mockResolvedValue(mockResponse);
@@ -195,7 +189,6 @@ describe("updateClaudeComment", () => {
     const mockError = new Error("Internal Server Error") as any;
     mockError.status = 500;
 
-    // @ts-expect-error Mock implementation doesn't match full type signature
     mockOctokit.rest.pulls.updateReviewComment = jest
       .fn()
       .mockRejectedValue(mockError);
@@ -226,7 +219,6 @@ describe("updateClaudeComment", () => {
   test("should propagate error when issue comment update fails", async () => {
     const mockError = new Error("Forbidden");
 
-    // @ts-expect-error Mock implementation doesn't match full type signature
     mockOctokit.rest.issues.updateComment = jest
       .fn()
       .mockRejectedValue(mockError);
@@ -261,7 +253,6 @@ describe("updateClaudeComment", () => {
       },
     };
 
-    // @ts-expect-error Mock implementation doesn't match full type signature
     mockOctokit.rest.issues.updateComment = jest
       .fn()
       .mockResolvedValue(mockResponse);
@@ -294,7 +285,6 @@ describe("updateClaudeComment", () => {
       },
     };
 
-    // @ts-expect-error Mock implementation doesn't match full type signature
     mockOctokit.rest.issues.updateComment = jest
       .fn()
       .mockResolvedValue(mockResponse);
@@ -345,7 +335,6 @@ const code = "example";
       },
     };
 
-    // @ts-expect-error Mock implementation doesn't match full type signature
     mockOctokit.rest.issues.updateComment = jest
       .fn()
       .mockResolvedValue(mockResponse);
@@ -388,7 +377,6 @@ const code = "example";
       },
     };
 
-    // @ts-expect-error Mock implementation doesn't match full type signature
     mockOctokit.rest.pulls.updateReviewComment = jest
       .fn()
       .mockResolvedValue(mockResponse);
