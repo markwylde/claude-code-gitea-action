@@ -277,8 +277,6 @@ export function prepareContext(
         throw new Error(
           "ISSUE_NUMBER is required for issue_comment event for issues",
         );
-      } else if (!claudeBranch) {
-        throw new Error("CLAUDE_BRANCH is required for issue_comment event");
       }
 
       eventData = {
@@ -288,7 +286,7 @@ export function prepareContext(
         baseBranch,
         issueNumber,
         commentBody,
-        claudeBranch,
+        ...(claudeBranch && { claudeBranch }),
       };
       break;
 
@@ -305,10 +303,6 @@ export function prepareContext(
       if (!baseBranch) {
         throw new Error("BASE_BRANCH is required for issues event");
       }
-      if (!claudeBranch) {
-        throw new Error("CLAUDE_BRANCH is required for issues event");
-      }
-
       if (eventAction === "assigned") {
         if (!assigneeTrigger && !directPrompt) {
           throw new Error(
@@ -322,7 +316,7 @@ export function prepareContext(
           issueNumber,
           baseBranch,
           ...(assigneeTrigger && { assigneeTrigger }),
-          claudeBranch,
+          ...(claudeBranch && { claudeBranch }),
         };
       } else if (eventAction === "labeled") {
         if (!labelTrigger) {
@@ -334,7 +328,7 @@ export function prepareContext(
           isPR: false,
           issueNumber,
           baseBranch,
-          claudeBranch,
+          ...(claudeBranch && { claudeBranch }),
           labelTrigger,
         };
       } else if (eventAction === "opened") {

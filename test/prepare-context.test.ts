@@ -69,10 +69,19 @@ describe("parseEnvVarsWithContext", () => {
         }
       });
 
-      test("should throw error when CLAUDE_BRANCH is missing", () => {
-        expect(() =>
-          prepareContext(mockIssueCommentContext, "12345", "main"),
-        ).toThrow("CLAUDE_BRANCH is required for issue_comment event");
+      test("should allow missing CLAUDE_BRANCH and omit it from event data", () => {
+        const result = prepareContext(
+          mockIssueCommentContext,
+          "12345",
+          "main",
+        );
+
+        if (
+          result.eventData.eventName === "issue_comment" &&
+          !result.eventData.isPR
+        ) {
+          expect(result.eventData.claudeBranch).toBeUndefined();
+        }
       });
 
       test("should throw error when BASE_BRANCH is missing", () => {
@@ -203,10 +212,12 @@ describe("parseEnvVarsWithContext", () => {
       }
     });
 
-    test("should throw error when CLAUDE_BRANCH is missing for issues", () => {
-      expect(() =>
-        prepareContext(mockIssueOpenedContext, "12345", "main"),
-      ).toThrow("CLAUDE_BRANCH is required for issues event");
+    test("should allow issues event without CLAUDE_BRANCH", () => {
+      const result = prepareContext(mockIssueOpenedContext, "12345", "main");
+
+      if (result.eventData.eventName === "issues") {
+        expect(result.eventData.claudeBranch).toBeUndefined();
+      }
     });
 
     test("should throw error when BASE_BRANCH is missing for issues", () => {
