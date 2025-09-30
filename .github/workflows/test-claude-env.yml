@@ -19,7 +19,8 @@ jobs:
         with:
           prompt: |
             Use the Bash tool to run: echo "VAR1: $VAR1" && echo "VAR2: $VAR2"
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY && secrets.ANTHROPIC_API_KEY || secrets.CLAUDE_CREDENTIALS }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CREDENTIALS }}
           claude_env: |
             # This is a comment
             VAR1: value1
