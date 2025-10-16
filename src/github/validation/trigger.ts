@@ -112,6 +112,20 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
       );
       return true;
     }
+
+    // Check if trigger user is in requested reviewers (treat same as mention in text)
+    const triggerUser = triggerPhrase.replace(/^@/, "");
+    const requestedReviewers = context.payload.pull_request.requested_reviewers || [];
+    const isReviewerRequested = requestedReviewers.some(reviewer => 
+      'login' in reviewer && reviewer.login === triggerUser
+    );
+
+    if (isReviewerRequested) {
+      console.log(
+        `Pull request has '${triggerUser}' as requested reviewer (treating as trigger)`,
+      );
+      return true;
+    }
   }
 
   // Check for pull request review body trigger

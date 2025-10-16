@@ -68,7 +68,7 @@ jobs:
 | `allowed_tools`       | Additional tools for Claude to use (the base GitHub tools will always be included)                                           | No       | ""                     |
 | `disallowed_tools`    | Tools that Claude should never use                                                                                           | No       | ""                     |
 | `custom_instructions` | Additional custom instructions to include in the prompt for Claude                                                           | No       | ""                     |
-| `assignee_trigger`    | The assignee username that triggers the action (e.g. @claude). Only used for issue assignment                                | No       | -                      |
+| `assignee_trigger`    | The assignee username that triggers the action (e.g. @claude). Only used for issue and PR assignment                                | No       | -                      |
 | `trigger_phrase`      | The trigger phrase to look for in comments, issue/PR bodies, and issue titles                                                | No       | `@claude`              |
 | `claude_git_name`     | Git user.name for commits made by Claude                                                                                     | No       | `Claude`               |
 | `claude_git_email`    | Git user.email for commits made by Claude                                                                                    | No       | `claude@anthropic.com` |
