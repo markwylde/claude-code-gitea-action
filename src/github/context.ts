@@ -55,7 +55,7 @@ export function parseGitHubContext(): ParsedGitHubContext {
   }
 
   const commonFields = {
-    runId: process.env.GITHUB_RUN_NUMBER!,
+    runId: process.env.GITHUB_RUN_ID!,
     eventName: context.eventName,
     eventAction: context.payload.action,
     repository: {
