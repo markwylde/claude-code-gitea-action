@@ -45,8 +45,9 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
   // Check for issue label trigger
   if (isIssuesEvent(context) && context.eventAction === "labeled") {
     const triggerLabel = context.inputs.labelTrigger?.trim();
-    const appliedLabel = (context.payload as IssuesLabeledEvent).label?.name
-      ?.trim();
+    const appliedLabel = (
+      context.payload as IssuesLabeledEvent
+    ).label?.name?.trim();
 
     console.log(
       `Checking label trigger: expected='${triggerLabel}', applied='${appliedLabel}'`,
@@ -55,7 +56,9 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
     if (
       triggerLabel &&
       appliedLabel &&
-      triggerLabel.localeCompare(appliedLabel, undefined, { sensitivity: "accent" }) === 0
+      triggerLabel.localeCompare(appliedLabel, undefined, {
+        sensitivity: "accent",
+      }) === 0
     ) {
       console.log(`Issue labeled with trigger label '${triggerLabel}'`);
       return true;
@@ -115,9 +118,10 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
 
     // Check if trigger user is in requested reviewers (treat same as mention in text)
     const triggerUser = triggerPhrase.replace(/^@/, "");
-    const requestedReviewers = context.payload.pull_request.requested_reviewers || [];
-    const isReviewerRequested = requestedReviewers.some(reviewer => 
-      'login' in reviewer && reviewer.login === triggerUser
+    const requestedReviewers =
+      context.payload.pull_request.requested_reviewers || [];
+    const isReviewerRequested = requestedReviewers.some(
+      (reviewer) => "login" in reviewer && reviewer.login === triggerUser,
     );
 
     if (isReviewerRequested) {
@@ -153,7 +157,7 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
   ) {
     const commentBody = isIssueCommentEvent(context)
       ? context.payload.comment.body
-      : context.payload.comment.body;
+      : (context.payload.comment?.body ?? context.payload.review?.content);
     // Check for exact match with word boundaries or punctuation
     const regex = new RegExp(
       `(^|\\s)${escapeRegExp(triggerPhrase)}([\\s.,!?;:]|$)`,

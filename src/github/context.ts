@@ -10,6 +10,13 @@ import type {
 import type { ModeName } from "../modes/types";
 import { DEFAULT_MODE, isValidMode } from "../modes/registry";
 
+// Gitea's pull_request_review_comment payload differs from GitHub's:
+// content lives in `review.content` and the sender in `sender`, with no `comment` object.
+export type GiteaReviewCommentPayload = PullRequestReviewCommentEvent & {
+  review?: { type: string; content: string };
+  sender?: { login: string };
+};
+
 export type ParsedGitHubContext = {
   runId: string;
   eventName: string;
@@ -25,7 +32,7 @@ export type ParsedGitHubContext = {
     | IssueCommentEvent
     | PullRequestEvent
     | PullRequestReviewEvent
-    | PullRequestReviewCommentEvent;
+    | GiteaReviewCommentPayload;
   entityNumber: number;
   isPR: boolean;
   inputs: {
@@ -187,7 +194,7 @@ export function isPullRequestReviewEvent(
 
 export function isPullRequestReviewCommentEvent(
   context: ParsedGitHubContext,
-): context is ParsedGitHubContext & { payload: PullRequestReviewCommentEvent } {
+): context is ParsedGitHubContext & { payload: GiteaReviewCommentPayload } {
   return context.eventName === "pull_request_review_comment";
 }
 
