@@ -41,15 +41,22 @@ async function run() {
       // GitHub has separate ID namespaces for review comments and issue comments
       // We need to use the correct API based on the event type
       if (isPullRequestReviewCommentEvent(context)) {
-        // For PR review comments, use the pulls API
-        console.log(`Fetching PR review comment ${commentId}`);
-        const response = await client.api.customRequest(
-          "GET",
-          `/api/v1/repos/${owner}/${repo}/pulls/comments/${commentId}`,
-        );
-        comment = response.data;
-        isPRReviewComment = true;
-        console.log("Successfully fetched as PR review comment");
+        // Try the PR review comment endpoint first; Gitea may have created an
+        // issue comment instead (no comment.id in payload), so fall through on 404.
+        try {
+          console.log(`Fetching PR review comment ${commentId}`);
+          const response = await client.api.customRequest(
+            "GET",
+            `/api/v1/repos/${owner}/${repo}/pulls/comments/${commentId}`,
+          );
+          comment = response.data;
+          isPRReviewComment = true;
+          console.log("Successfully fetched as PR review comment");
+        } catch {
+          console.log(
+            "PR review comment not found, falling back to issue comment",
+          );
+        }
       }
 
       // For all other event types, use the issues API

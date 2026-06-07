@@ -170,8 +170,10 @@ export function prepareContext(
     commentBody = context.payload.comment?.body;
     triggerUsername = context.payload.comment?.user?.login;
   } else if (isPullRequestReviewEvent(context)) {
-    commentBody = context.payload.review?.body ?? "";
-    triggerUsername = context.payload.review?.user?.login;
+    commentBody =
+      context.payload.review?.body ?? context.payload.review?.content ?? "";
+    triggerUsername =
+      context.payload.review?.user?.login ?? context.payload.sender?.login;
   } else if (isPullRequestReviewCommentEvent(context)) {
     commentId = context.payload.comment?.id?.toString();
     commentBody =
