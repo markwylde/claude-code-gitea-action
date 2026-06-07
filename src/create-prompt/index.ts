@@ -599,18 +599,7 @@ ${sanitizeContent(context.directPrompt)}
 </direct_prompt>`
     : ""
 }
-${
-  eventData.eventName === "pull_request_review_comment"
-    ? `<comment_tool_info>
-IMPORTANT: For this inline PR review comment, you have been provided with ONLY the mcp__gitea__update_pull_request_comment tool to update this specific review comment.
-
-Tool usage example for mcp__gitea__update_pull_request_comment:
-{
-  "body": "Your comment text here"
-}
-All four parameters (owner, repo, commentId, body) are required.
-</comment_tool_info>`
-    : `<comment_tool_info>
+${`<comment_tool_info>
 IMPORTANT: For this event type, you have been provided with ONLY the mcp__gitea__update_issue_comment tool to update comments.
 
 Tool usage example for mcp__gitea__update_issue_comment:
@@ -621,8 +610,7 @@ Tool usage example for mcp__gitea__update_issue_comment:
   "body": "Your comment text here"
 }
 All four parameters (owner, repo, commentId, body) are required.
-</comment_tool_info>`
-}
+</comment_tool_info>`}
 
 Your task is to analyze the context, understand the request, and provide helpful responses and/or implement code changes as needed.
 
@@ -636,7 +624,7 @@ Follow these steps:
 1. Create a Todo List:
    - Use your Gitea comment to maintain a detailed task list based on the request.
    - Format todos as a checklist (- [ ] for incomplete, - [x] for complete).
-   - Update the comment using ${eventData.eventName === "pull_request_review_comment" ? "mcp__gitea__update_pull_request_comment" : "mcp__gitea__update_issue_comment"} with each task completion.
+   - Update the comment using mcp__gitea__update_issue_comment with each task completion.
 
 2. Gather Context:
    - Analyze the pre-fetched data provided above.
@@ -742,8 +730,8 @@ ${!eventData.isPR || !eventData.claudeBranch ? `6. Final Update:` : `5. Final Up
 
 Important Notes:
 - All communication must happen through Gitea PR comments.
-- Never create new comments. Only update the existing comment using ${eventData.eventName === "pull_request_review_comment" ? "mcp__gitea__update_pull_request_comment" : "mcp__gitea__update_issue_comment"} with comment_id: ${context.claudeCommentId}.
-- This includes ALL responses: code reviews, answers to questions, progress updates, and final results.${eventData.isPR ? `\n- PR CRITICAL: After reading files and forming your response, you MUST post it by calling ${eventData.eventName === "pull_request_review_comment" ? "mcp__gitea__update_pull_request_comment" : "mcp__gitea__update_issue_comment"}. Do NOT just respond with a normal response, the user will not see it.` : ""}
+- Never create new comments. Only update the existing comment using mcp__gitea__update_issue_comment with comment_id: ${context.claudeCommentId}.
+- This includes ALL responses: code reviews, answers to questions, progress updates, and final results.${eventData.isPR ? `\n- PR CRITICAL: After reading files and forming your response, you MUST post it by calling mcp__gitea__update_issue_comment. Do NOT just respond with a normal response, the user will not see it.` : ""}
 - You communicate exclusively by editing your single comment - not through any other means.
 - Use this spinner HTML when work is in progress: <img src="https://raw.githubusercontent.com/markwylde/claude-code-gitea-action/refs/heads/gitea/assets/spinner.gif" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />
 ${eventData.isPR && !eventData.claudeBranch ? `- Always push to the existing branch when triggered on a PR.` : eventData.claudeBranch ? `- IMPORTANT: You are already on the correct branch (${eventData.claudeBranch}). Do not create additional branches.` : `- IMPORTANT: You are currently on the base branch (${eventData.baseBranch}). First check for existing claude branches for this ${eventData.isPR ? "PR" : "issue"} and use them if found, otherwise create a new branch using mcp__local_git_ops__create_branch.`}
@@ -754,8 +742,8 @@ ${eventData.isPR && !eventData.claudeBranch ? `- Always push to the existing bra
   - mcp__local_git_ops__delete_files: {"files": ["path/to/old.js"], "message": "chore: remove deprecated file"}
 - Display the todo list as a checklist in the Gitea comment and mark things off as you go.
 - All communication must happen through Gitea PR comments.
-- Never create new comments. Only update the existing comment using ${eventData.eventName === "pull_request_review_comment" ? "mcp__gitea__update_pull_request_comment" : "mcp__gitea__update_issue_comment"}.
-- This includes ALL responses: code reviews, answers to questions, progress updates, and final results.${eventData.isPR ? `\n- PR CRITICAL: After reading files and forming your response, you MUST post it by calling ${eventData.eventName === "pull_request_review_comment" ? "mcp__gitea__update_pull_request_comment" : "mcp__gitea__update_issue_comment"}. Do NOT just respond with a normal response, the user will not see it.` : ""}
+- Never create new comments. Only update the existing comment using mcp__gitea__update_issue_comment.
+- This includes ALL responses: code reviews, answers to questions, progress updates, and final results.${eventData.isPR ? `\n- PR CRITICAL: After reading files and forming your response, you MUST post it by calling mcp__gitea__update_issue_comment. Do NOT just respond with a normal response, the user will not see it.` : ""}
 - You communicate exclusively by editing your single comment - not through any other means.
 - Use this spinner HTML when work is in progress: <img src="https://github.com/user-attachments/assets/5ac382c7-e004-429b-8e35-7feb3e8f9c6f" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />
 ${eventData.isPR && !eventData.claudeBranch ? `- Always push to the existing branch when triggered on a PR.` : `- IMPORTANT: You are already on the correct branch (${eventData.claudeBranch || "the created branch"}). Never create new branches when triggered on issues or closed/merged PRs.`}
