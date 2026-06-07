@@ -135,9 +135,12 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
   // Check for pull request review body trigger
   if (
     isPullRequestReviewEvent(context) &&
-    (context.eventAction === "submitted" || context.eventAction === "edited")
+    (context.eventAction === "submitted" ||
+      context.eventAction === "edited" ||
+      context.eventAction === "reviewed")
   ) {
-    const reviewBody = context.payload.review.body || "";
+    const reviewBody =
+      context.payload.review?.body ?? context.payload.review?.content ?? "";
     // Check for exact match with word boundaries or punctuation
     const regex = new RegExp(
       `(^|\\s)${escapeRegExp(triggerPhrase)}([\\s.,!?;:]|$)`,

@@ -10,12 +10,19 @@ import type {
 import type { ModeName } from "../modes/types";
 import { DEFAULT_MODE, isValidMode } from "../modes/registry";
 
-// Gitea's pull_request_review_comment payload differs from GitHub's:
-// content lives in `review.content` and the sender in `sender`, with no `comment` object.
-export type GiteaReviewCommentPayload = PullRequestReviewCommentEvent & {
-  review?: { type: string; content: string };
+// Gitea review payloads use `review.content` instead of `review.body`, and
+// `sender` instead of nested user objects. These types extend the GitHub base
+// types to make both fields available without `as any` casts.
+export type GiteaPullRequestReviewEvent = PullRequestReviewEvent & {
+  review?: { content?: string };
   sender?: { login: string };
 };
+
+export type GiteaPullRequestReviewCommentEvent =
+  PullRequestReviewCommentEvent & {
+    review?: { type: string; content: string };
+    sender?: { login: string };
+  };
 
 export type ParsedGitHubContext = {
   runId: string;
@@ -31,8 +38,8 @@ export type ParsedGitHubContext = {
     | IssuesEvent
     | IssueCommentEvent
     | PullRequestEvent
-    | PullRequestReviewEvent
-    | GiteaReviewCommentPayload;
+    | GiteaPullRequestReviewEvent
+    | GiteaPullRequestReviewCommentEvent;
   entityNumber: number;
   isPR: boolean;
   inputs: {
@@ -188,13 +195,15 @@ export function isPullRequestEvent(
 
 export function isPullRequestReviewEvent(
   context: ParsedGitHubContext,
-): context is ParsedGitHubContext & { payload: PullRequestReviewEvent } {
+): context is ParsedGitHubContext & { payload: GiteaPullRequestReviewEvent } {
   return context.eventName === "pull_request_review";
 }
 
 export function isPullRequestReviewCommentEvent(
   context: ParsedGitHubContext,
-): context is ParsedGitHubContext & { payload: GiteaReviewCommentPayload } {
+): context is ParsedGitHubContext & {
+  payload: GiteaPullRequestReviewCommentEvent;
+} {
   return context.eventName === "pull_request_review_comment";
 }
 
