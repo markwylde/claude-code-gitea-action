@@ -31,7 +31,10 @@ export async function createInitialComment(
     console.log(`Repository: ${owner}/${repo}`);
 
     // Only use createReplyForReviewComment if it's a PR review comment AND we have a comment_id
-    if (isPullRequestReviewCommentEvent(context)) {
+    if (
+      isPullRequestReviewCommentEvent(context) &&
+      context.payload.comment?.id
+    ) {
       console.log(`Creating PR review comment reply`);
       response = await api.customRequest(
         "POST",

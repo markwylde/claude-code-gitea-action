@@ -1,5 +1,3 @@
-import { GITEA_SERVER_URL } from "../api/config";
-
 export type ExecutionDetails = {
   cost_usd?: number;
   duration_ms?: number;
@@ -166,7 +164,11 @@ export function updateCommentBody(input: CommentUpdateInput): string {
           .filter((segment) => segment);
         const [owner, repo] = segments;
         if (owner && repo) {
-          branchUrl = `${GITEA_SERVER_URL}/${owner}/${repo}/src/branch/${finalBranchName}`;
+          const serverUrl =
+            process.env.GITEA_SERVER_URL ||
+            process.env.GITHUB_SERVER_URL ||
+            "https://github.com";
+          branchUrl = `${serverUrl}/${owner}/${repo}/src/branch/${finalBranchName}`;
         }
       } catch (error) {
         console.warn(`Failed to derive branch URL from job URL: ${error}`);
