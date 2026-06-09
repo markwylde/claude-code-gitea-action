@@ -139,4 +139,4 @@ outputs:
 
 runs:
   using: docker
-  image: docker.io/markwylde/gitea-runners-claude:latest
+  image: docker.io/leoarry/claude-code-gitea:latest

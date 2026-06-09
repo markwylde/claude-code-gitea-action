@@ -29,11 +29,9 @@ RUN mkdir -p /root/.claude && \
 
 # Install action dependencies (separate COPY for better layer caching)
 COPY package.json bun.lock /action/
-RUN cd /action && bun install --frozen-lockfile
-
+RUN cd /action && bun install
 COPY base-action/package.json base-action/bun.lock /action/base-action/
-RUN cd /action/base-action && bun install --frozen-lockfile
-
+RUN cd /action/base-action && bun install
 # Copy action source
 COPY . /action/
 
