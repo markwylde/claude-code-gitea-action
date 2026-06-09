@@ -1,3 +1,4 @@
+import * as core from "@actions/core";
 import * as github from "@actions/github";
 import type {
   IssuesEvent,
@@ -63,7 +64,7 @@ export type ParsedGitHubContext = {
 export function parseGitHubContext(): ParsedGitHubContext {
   const context = github.context;
 
-  const modeInput = process.env.MODE ?? DEFAULT_MODE;
+  const modeInput = core.getInput("mode") || DEFAULT_MODE;
   if (!isValidMode(modeInput)) {
     throw new Error(`Invalid mode: ${modeInput}.`);
   }
@@ -80,19 +81,19 @@ export function parseGitHubContext(): ParsedGitHubContext {
     actor: context.actor,
     inputs: {
       mode: modeInput as ModeName,
-      triggerPhrase: process.env.TRIGGER_PHRASE ?? "@claude",
-      assigneeTrigger: process.env.ASSIGNEE_TRIGGER ?? "",
-      labelTrigger: process.env.LABEL_TRIGGER ?? "",
-      allowedTools: parseMultilineInput(process.env.ALLOWED_TOOLS ?? ""),
-      disallowedTools: parseMultilineInput(process.env.DISALLOWED_TOOLS ?? ""),
-      customInstructions: process.env.CUSTOM_INSTRUCTIONS ?? "",
-      directPrompt: process.env.DIRECT_PROMPT ?? "",
-      overridePrompt: process.env.OVERRIDE_PROMPT ?? "",
-      baseBranch: process.env.BASE_BRANCH,
-      branchPrefix: process.env.BRANCH_PREFIX ?? "claude/",
+      triggerPhrase: core.getInput("trigger_phrase") || "@claude",
+      assigneeTrigger: core.getInput("assignee_trigger"),
+      labelTrigger: core.getInput("label_trigger") || "claude",
+      allowedTools: parseMultilineInput(core.getInput("allowed_tools")),
+      disallowedTools: parseMultilineInput(core.getInput("disallowed_tools")),
+      customInstructions: core.getInput("custom_instructions"),
+      directPrompt: core.getInput("direct_prompt"),
+      overridePrompt: core.getInput("override_prompt"),
+      baseBranch: core.getInput("base_branch") || undefined,
+      branchPrefix: core.getInput("branch_prefix") || "claude/",
       useStickyComment: process.env.USE_STICKY_COMMENT === "true",
       additionalPermissions: parseAdditionalPermissions(
-        process.env.ADDITIONAL_PERMISSIONS ?? "",
+        core.getInput("additional_permissions"),
       ),
       useCommitSigning: process.env.USE_COMMIT_SIGNING === "true",
     },

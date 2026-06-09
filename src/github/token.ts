@@ -13,6 +13,13 @@ export async function setupGitHubToken(): Promise<string> {
       return providedToken;
     }
 
+    // Check for gitea_token action input
+    const giteaToken = core.getInput("gitea_token");
+    if (giteaToken) {
+      console.log("Using gitea_token input for authentication");
+      return giteaToken;
+    }
+
     // Use the standard GITHUB_TOKEN from the workflow environment
     const workflowToken = process.env.GITHUB_TOKEN;
 

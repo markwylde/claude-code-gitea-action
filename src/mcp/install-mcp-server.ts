@@ -1,6 +1,10 @@
 import * as core from "@actions/core";
 import type { ParsedGitHubContext } from "../github/context";
 
+// In Docker actions the code lives at /action; fall back to that if
+// GITHUB_ACTION_PATH is not set or doesn't contain the MCP servers.
+const ACTION_PATH = process.env.GITHUB_ACTION_PATH || "/action";
+
 export type PrepareMcpConfigOptions = {
   githubToken: string;
   owner: string;
@@ -27,7 +31,7 @@ export async function prepareMcpConfig({
     `[MCP-INSTALL] GitHub token: ${githubToken ? "***" : "undefined"}`,
   );
   console.log(
-    `[MCP-INSTALL] GITHUB_ACTION_PATH: ${process.env.GITHUB_ACTION_PATH}`,
+    `[MCP-INSTALL] GITHUB_ACTION_PATH: ${process.env.GITHUB_ACTION_PATH} (resolved: ${ACTION_PATH})`,
   );
   console.log(
     `[MCP-INSTALL] GITHUB_WORKSPACE: ${process.env.GITHUB_WORKSPACE}`,
@@ -40,7 +44,7 @@ export async function prepareMcpConfig({
           command: "bun",
           args: [
             "run",
-            `${process.env.GITHUB_ACTION_PATH}/src/mcp/gitea-mcp-server.ts`,
+            `${ACTION_PATH}/src/mcp/gitea-mcp-server.ts`,
           ],
           env: {
             GITHUB_TOKEN: githubToken,
@@ -56,7 +60,7 @@ export async function prepareMcpConfig({
           command: "bun",
           args: [
             "run",
-            `${process.env.GITHUB_ACTION_PATH}/src/mcp/local-git-ops-server.ts`,
+            `${ACTION_PATH}/src/mcp/local-git-ops-server.ts`,
           ],
           env: {
             GITHUB_TOKEN: githubToken,
@@ -66,6 +70,8 @@ export async function prepareMcpConfig({
             REPO_DIR: process.env.GITHUB_WORKSPACE || process.cwd(),
             GITEA_API_URL:
               process.env.GITEA_API_URL || "https://api.github.com",
+            CLAUDE_GIT_NAME: core.getInput("claude_git_name") || "Claude",
+            CLAUDE_GIT_EMAIL: core.getInput("claude_git_email") || "claude@anthropic.com",
           },
         },
       },
