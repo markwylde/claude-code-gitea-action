@@ -110,6 +110,21 @@ This ensures that all links in Claude's comments (job runs, branches, etc.) poin
 
 See [`examples/gitea-custom-url.yml`](./examples/gitea-custom-url.yml) for a complete example.
 
+### Running on a Pre-configured Container
+
+If your runner container already has bun and Claude pre-installed (e.g., [`markwylde/gitea-runners-claude`](https://hub.docker.com/r/markwylde/gitea-runners-claude)), use `path_to_bun_executable` and `path_to_claude_code_executable` to skip the installation steps:
+
+```yaml
+- uses: markwylde/claude-code-gitea-action
+  with:
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    gitea_token: ${{ secrets.GITEA_TOKEN }}
+    path_to_bun_executable: /root/.bun/bin/bun
+    path_to_claude_code_executable: /root/.local/bin/claude
+```
+
+See [`examples/gitea-run-on-container.yml`](./examples/gitea-run-on-container.yml) for a complete example.
+
 ### Gitea Setup Notes
 
 - Use a Gitea personal access token "GITEA_TOKEN"

@@ -1,0 +1,33 @@
+name: Claude Assistant
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned, labeled]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  claude-assistant:
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/markwylde/gitea-runners-claude:latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checking out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: markwylde/claude-code-gitea-action
+        with:
+          gitea_token: ${{ secrets.GITEA_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          path_to_bun_executable: /root/.bun/bin/bun
+          path_to_claude_code_executable: /root/.local/bin/claude
