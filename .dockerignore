@@ -1,0 +1,7 @@
+.git
+.devcontainer
+node_modules
+base-action/node_modules
+.github
+*.md
+!README.md

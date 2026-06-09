@@ -5,6 +5,10 @@ on:
     branches: [gitea]
     paths:
       - Dockerfile
+      - package.json
+      - bun.lock
+      - base-action/package.json
+      - base-action/bun.lock
   workflow_dispatch:
     inputs:
       image_name:

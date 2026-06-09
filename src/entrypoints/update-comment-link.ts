@@ -372,4 +372,8 @@ async function run() {
   }
 }
 
-run();
+export { run as updateCommentLink };
+
+if (import.meta.main) {
+  run();
+}

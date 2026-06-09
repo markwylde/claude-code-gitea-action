@@ -26,3 +26,15 @@ RUN curl -fsSL https://claude.ai/install.sh | bash -s ${CLAUDE_VERSION}
 
 RUN mkdir -p /root/.claude && \
     echo '{}' > /root/.claude/settings.json
+
+# Install action dependencies (separate COPY for better layer caching)
+COPY package.json bun.lock /action/
+RUN cd /action && bun install --frozen-lockfile
+
+COPY base-action/package.json base-action/bun.lock /action/base-action/
+RUN cd /action/base-action && bun install --frozen-lockfile
+
+# Copy action source
+COPY . /action/
+
+ENTRYPOINT ["bun", "run", "/action/src/entrypoints/run.ts"]
