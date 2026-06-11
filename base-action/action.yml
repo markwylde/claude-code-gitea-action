@@ -115,7 +115,7 @@ runs:
 
     - name: Install Claude Code
       shell: bash
-      run: bun install -g @anthropic-ai/claude-code@1.0.61
+      run: bun install -g @anthropic-ai/claude-code@2.1.173
 
     - name: Run Claude Code Action
       shell: bash
