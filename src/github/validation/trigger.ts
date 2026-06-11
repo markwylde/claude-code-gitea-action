@@ -27,7 +27,7 @@ export function checkContainsTrigger(context: ParsedGitHubContext): boolean {
   }
 
   // Check for assignee trigger
-  if (isIssuesEvent(context) && context.eventAction === "assigned") {
+  if (isIssuesEvent(context) && (context.eventAction === "assigned" || context.eventAction === "opened")) {
     // Remove @ symbol from assignee_trigger if present
     let triggerUser = assigneeTrigger?.replace(/^@/, "") || "";
     const assigneeUsername = context.payload.issue.assignee?.login || "";
