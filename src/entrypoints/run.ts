@@ -26,6 +26,25 @@ import { setupClaudeCodeSettings } from "../../base-action/src/setup-claude-code
 import { runClaude } from "../../base-action/src/run-claude";
 import { updateCommentLink } from "./update-comment-link";
 
+async function extractClaudeErrorMessage(
+  executionFile?: string,
+): Promise<string> {
+  if (executionFile && existsSync(executionFile)) {
+    try {
+      const outputData = JSON.parse(await Bun.file(executionFile).text());
+      const lastEntry = Array.isArray(outputData)
+        ? outputData[outputData.length - 1]
+        : undefined;
+      if (lastEntry?.result) {
+        return lastEntry.result;
+      }
+    } catch {
+      // fall through to generic message below
+    }
+  }
+  return "Claude Code execution failed";
+}
+
 async function run() {
   let githubToken: string | undefined;
   let commentId: number | undefined;
@@ -123,6 +142,10 @@ async function run() {
 
     core.setOutput("conclusion", result.conclusion);
     if (executionFile) core.setOutput("execution_file", executionFile);
+
+    if (result.conclusion === "failure") {
+      throw new Error(await extractClaudeErrorMessage(executionFile));
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (!prepareCompleted) {
