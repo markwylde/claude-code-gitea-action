@@ -187,7 +187,8 @@ runs:
         GITHUB_TOKEN: ${{ github.token }}
         OVERRIDE_GITHUB_TOKEN: ${{ inputs.gitea_token }}
         TRIGGER_USERNAME: ${{ github.event.comment.user.login || github.event.issue.user.login || github.event.pull_request.user.login || github.event.sender.login || github.triggering_actor || github.actor || '' }}
-
+        GITEA_API_URL: ${{ env.GITHUB_SERVER_URL }}
+        
         # Inputs consumed via core.getInput() (parseGitHubContext, token.ts, install-mcp-server.ts)
         INPUT_MODE: ${{ inputs.mode }}
         INPUT_TRIGGER_PHRASE: ${{ inputs.trigger_phrase }}
