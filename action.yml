@@ -169,7 +169,7 @@ runs:
       run: |
         if [ -z "${{ inputs.path_to_claude_code_executable }}" ]; then
           echo "Installing Claude Code..."
-          curl -fsSL https://claude.ai/install.sh | bash -s 1.0.117
+          curl -fsSL https://claude.ai/install.sh | bash -s 2.1.212
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
         else
           echo "Using custom Claude Code executable: ${{ inputs.path_to_claude_code_executable }}"
