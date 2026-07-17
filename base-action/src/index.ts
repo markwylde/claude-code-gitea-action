@@ -10,11 +10,7 @@ async function run() {
   try {
     validateEnvironmentVariables();
 
-    await setupClaudeCodeSettings(
-      process.env.INPUT_SETTINGS,
-      undefined, // homeDir
-      process.env.INPUT_EXPERIMENTAL_SLASH_COMMANDS_DIR,
-    );
+    await setupClaudeCodeSettings(process.env.INPUT_SETTINGS);
 
     const promptConfig = await preparePrompt({
       prompt: process.env.INPUT_PROMPT || "",

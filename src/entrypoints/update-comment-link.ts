@@ -25,16 +25,9 @@ async function run() {
     const githubToken = process.env.GITHUB_TOKEN!;
     const claudeBranch = process.env.CLAUDE_BRANCH;
     const baseBranch = process.env.BASE_BRANCH || "main";
-    const context = parseGitHubContext();
+    const triggerUsername = process.env.TRIGGER_USERNAME;
 
-    // Derive trigger username from the event payload (no env mapping needed in Docker actions)
-    const payload = context.payload as Record<string, unknown>;
-    const triggerUsername: string | undefined =
-      (payload.comment as Record<string, unknown> | undefined)?.user
-        ? String(((payload.comment as Record<string, unknown>).user as Record<string, unknown>).login ?? "")
-        : (payload.sender as Record<string, unknown> | undefined)?.login
-          ? String((payload.sender as Record<string, unknown>).login)
-          : context.actor || undefined;
+    const context = parseGitHubContext();
     const { owner, repo } = context.repository;
     const client = createClient(githubToken);
 

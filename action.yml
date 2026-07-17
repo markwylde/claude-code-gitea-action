@@ -134,9 +134,108 @@ inputs:
 outputs:
   execution_file:
     description: "Path to the Claude Code execution output file"
+    value: ${{ steps.run.outputs.execution_file }}
   branch_name:
     description: "The branch created by Claude Code for this execution"
+    value: ${{ steps.run.outputs.branch_name }}
 
 runs:
-  using: docker
-  image: docker://leoarry/claude-code-gitea:latest
+  using: "composite"
+  steps:
+    - name: Install Bun
+      if: inputs.path_to_bun_executable == ''
+      uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # https://github.com/oven-sh/setup-bun/releases/tag/v2.0.2
+      with:
+        bun-version: 1.2.11
+
+    - name: Setup Custom Bun Path
+      if: inputs.path_to_bun_executable != ''
+      shell: bash
+      run: |
+        echo "Using custom Bun executable: ${{ inputs.path_to_bun_executable }}"
+        BUN_DIR=$(dirname "${{ inputs.path_to_bun_executable }}")
+        echo "$BUN_DIR" >> "$GITHUB_PATH"
+
+    - name: Install Dependencies
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        bun install
+        cd ${{ github.action_path }}/base-action
+        bun install
+
+    - name: Install Claude Code
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.path_to_claude_code_executable }}" ]; then
+          echo "Installing Claude Code..."
+          curl -fsSL https://claude.ai/install.sh | bash -s 1.0.117
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        else
+          echo "Using custom Claude Code executable: ${{ inputs.path_to_claude_code_executable }}"
+          CLAUDE_DIR=$(dirname "${{ inputs.path_to_claude_code_executable }}")
+          echo "$CLAUDE_DIR" >> "$GITHUB_PATH"
+        fi
+
+    - name: Run Claude Code
+      id: run
+      shell: bash
+      run: |
+        bun run ${{ github.action_path }}/src/entrypoints/run.ts
+      env:
+        CLAUDE_CODE_ACTION: "1"
+        GITHUB_TOKEN: ${{ github.token }}
+        OVERRIDE_GITHUB_TOKEN: ${{ inputs.gitea_token }}
+        TRIGGER_USERNAME: ${{ github.event.comment.user.login || github.event.issue.user.login || github.event.pull_request.user.login || github.event.sender.login || github.triggering_actor || github.actor || '' }}
+
+        # Inputs consumed via core.getInput() (parseGitHubContext, token.ts, install-mcp-server.ts)
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_TRIGGER_PHRASE: ${{ inputs.trigger_phrase }}
+        INPUT_ASSIGNEE_TRIGGER: ${{ inputs.assignee_trigger }}
+        INPUT_LABEL_TRIGGER: ${{ inputs.label_trigger }}
+        INPUT_ALLOWED_TOOLS: ${{ inputs.allowed_tools }}
+        INPUT_DISALLOWED_TOOLS: ${{ inputs.disallowed_tools }}
+        INPUT_CUSTOM_INSTRUCTIONS: ${{ inputs.custom_instructions }}
+        INPUT_DIRECT_PROMPT: ${{ inputs.direct_prompt }}
+        INPUT_OVERRIDE_PROMPT: ${{ inputs.override_prompt }}
+        INPUT_BASE_BRANCH: ${{ inputs.base_branch }}
+        INPUT_BRANCH_PREFIX: ${{ inputs.branch_prefix }}
+        INPUT_ADDITIONAL_PERMISSIONS: ${{ inputs.additional_permissions }}
+        INPUT_GITEA_TOKEN: ${{ inputs.gitea_token }}
+        INPUT_CLAUDE_GIT_NAME: ${{ inputs.claude_git_name }}
+        INPUT_CLAUDE_GIT_EMAIL: ${{ inputs.claude_git_email }}
+
+        # Claude Code execution settings (read directly via process.env in run.ts/base-action)
+        INPUT_SETTINGS: ${{ inputs.settings }}
+        INPUT_MAX_TURNS: ${{ inputs.max_turns }}
+        INPUT_TIMEOUT_MINUTES: ${{ inputs.timeout_minutes }}
+        INPUT_SYSTEM_PROMPT: ${{ inputs.system_prompt }}
+        INPUT_APPEND_SYSTEM_PROMPT: ${{ inputs.append_system_prompt }}
+        INPUT_CLAUDE_ENV: ${{ inputs.claude_env }}
+        INPUT_FALLBACK_MODEL: ${{ inputs.fallback_model }}
+        INPUT_PATH_TO_CLAUDE_CODE_EXECUTABLE: ${{ inputs.path_to_claude_code_executable }}
+        INPUT_PATH_TO_BUN_EXECUTABLE: ${{ inputs.path_to_bun_executable }}
+        ANTHROPIC_MODEL: ${{ inputs.model || inputs.anthropic_model }}
+
+        # Provider configuration
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
+        CLAUDE_CODE_USE_BEDROCK: ${{ inputs.use_bedrock == 'true' && '1' || '' }}
+        CLAUDE_CODE_USE_VERTEX: ${{ inputs.use_vertex == 'true' && '1' || '' }}
+        ANTHROPIC_BASE_URL: ${{ env.ANTHROPIC_BASE_URL }}
+
+        # AWS configuration (Bedrock)
+        AWS_REGION: ${{ env.AWS_REGION }}
+        AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+        AWS_SESSION_TOKEN: ${{ env.AWS_SESSION_TOKEN }}
+        ANTHROPIC_BEDROCK_BASE_URL: ${{ env.ANTHROPIC_BEDROCK_BASE_URL || (env.AWS_REGION && format('https://bedrock-runtime.{0}.amazonaws.com', env.AWS_REGION)) }}
+
+        # GCP configuration (Vertex)
+        ANTHROPIC_VERTEX_PROJECT_ID: ${{ env.ANTHROPIC_VERTEX_PROJECT_ID }}
+        CLOUD_ML_REGION: ${{ env.CLOUD_ML_REGION }}
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
+        ANTHROPIC_VERTEX_BASE_URL: ${{ env.ANTHROPIC_VERTEX_BASE_URL }}
+        VERTEX_REGION_CLAUDE_3_5_HAIKU: ${{ env.VERTEX_REGION_CLAUDE_3_5_HAIKU }}
+        VERTEX_REGION_CLAUDE_3_5_SONNET: ${{ env.VERTEX_REGION_CLAUDE_3_5_SONNET }}
+        VERTEX_REGION_CLAUDE_3_7_SONNET: ${{ env.VERTEX_REGION_CLAUDE_3_7_SONNET }}
