@@ -40,7 +40,12 @@ describe("downloadCommentImages", () => {
       },
     ];
 
-    const result = await downloadCommentImages(noopClient, "owner", "repo", comments);
+    const result = await downloadCommentImages(
+      noopClient,
+      "owner",
+      "repo",
+      comments,
+    );
 
     expect(result.size).toBe(0);
     expect(consoleLogSpy).toHaveBeenCalled();

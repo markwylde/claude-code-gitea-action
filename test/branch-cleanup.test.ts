@@ -97,7 +97,9 @@ describe("checkAndDeleteEmptyBranch", () => {
   });
 
   test("falls back to branch link when API call fails", async () => {
-    const client = createMockClient({ error: Object.assign(new Error("boom"), { status: 500 }) });
+    const client = createMockClient({
+      error: Object.assign(new Error("boom"), { status: 500 }),
+    });
     const result = await checkAndDeleteEmptyBranch(
       client,
       "owner",

@@ -189,7 +189,6 @@ runs:
           echo "$CLAUDE_DIR" >> "$GITHUB_PATH"
         fi
     # TODO pass claude_code_executable as input and use it here
-
     - name: Run Claude Code
       id: claude-code
       if: steps.prepare.outputs.contains_trigger == 'true'
@@ -225,7 +224,7 @@ runs:
         USE_VERTEX: ${{ inputs.use_vertex }}
         ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
         CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
-        
+
         # New settings support
         SETTINGS: ${{ inputs.settings }}
         SYSTEM_PROMPT: ${{ inputs.system_prompt }}
