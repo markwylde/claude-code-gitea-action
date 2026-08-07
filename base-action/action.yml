@@ -61,6 +61,10 @@ inputs:
     description: "Timeout in minutes for Claude Code execution"
     required: false
     default: "10"
+  path_to_claude_code_executable:
+    description: "Path to a custom Claude Code executable to use instead of installing"
+    required: false
+    default: ""
 
   # Authentication settings
   anthropic_api_key:
@@ -114,10 +118,20 @@ runs:
         bun install
 
     - name: Install Claude Code
+      if: inputs.path_to_claude_code_executable == ''
       shell: bash
       run: |
         curl -fsSL https://claude.ai/install.sh | bash -s 2.1.173
         echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+    - name: Use custom Claude Code executable
+      if: inputs.path_to_claude_code_executable != ''
+      shell: bash
+      env:
+        CLAUDE_CODE_EXECUTABLE: ${{ inputs.path_to_claude_code_executable }}
+      run: |
+        echo "Using custom Claude Code executable: $CLAUDE_CODE_EXECUTABLE"
+        echo "$(dirname "$CLAUDE_CODE_EXECUTABLE")" >> "$GITHUB_PATH"
 
     - name: Run Claude Code Action
       shell: bash
