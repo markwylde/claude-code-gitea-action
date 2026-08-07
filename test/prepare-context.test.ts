@@ -70,11 +70,7 @@ describe("parseEnvVarsWithContext", () => {
       });
 
       test("should allow missing CLAUDE_BRANCH and omit it from event data", () => {
-        const result = prepareContext(
-          mockIssueCommentContext,
-          "12345",
-          "main",
-        );
+        const result = prepareContext(mockIssueCommentContext, "12345", "main");
 
         if (
           result.eventData.eventName === "issue_comment" &&

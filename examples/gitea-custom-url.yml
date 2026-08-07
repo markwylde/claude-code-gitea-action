@@ -18,6 +18,6 @@ jobs:
           # Set this to your public Gitea URL to override the internal container URL
           # This ensures that links in comments point to the correct public URL
           GITEA_SERVER_URL: https://gitea.example.com
-          
+
           # Note: GITHUB_SERVER_URL is automatically set by Gitea Actions to the internal URL
           # but it will be overridden by GITEA_SERVER_URL if set above

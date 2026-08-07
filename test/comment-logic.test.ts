@@ -140,8 +140,7 @@ describe("updateCommentBody", () => {
     it("removes old branch links from body", () => {
       const input = {
         ...baseInput,
-        currentBody:
-          `Some comment with [View branch](${BRANCH_BASE_URL}/branch-name)` ,
+        currentBody: `Some comment with [View branch](${BRANCH_BASE_URL}/branch-name)`,
         branchName: "new-branch-name",
       };
 

@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -49,8 +48,7 @@ jobs:
         with:
           prompt: |
             List the files in the current directory starting with "package"
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY && secrets.ANTHROPIC_API_KEY || secrets.CLAUDE_CREDENTIALS }}
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CREDENTIALS }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           path_to_claude_code_executable: /home/runner/.local/bin/claude
           path_to_bun_executable: /home/runner/.bun/bin/bun
           allowed_tools: "LS,Read"

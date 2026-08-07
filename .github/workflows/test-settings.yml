@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -19,8 +18,7 @@ jobs:
         with:
           prompt: |
             Use Bash to echo "Hello from settings test"
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY && secrets.ANTHROPIC_API_KEY || secrets.CLAUDE_CREDENTIALS }}
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CREDENTIALS }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           settings: |
             {
               "permissions": {
@@ -70,8 +68,7 @@ jobs:
         with:
           prompt: |
             Use Bash to echo "This should not work"
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY && secrets.ANTHROPIC_API_KEY || secrets.CLAUDE_CREDENTIALS }}
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CREDENTIALS }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           settings: |
             {
               "permissions": {
@@ -114,8 +111,7 @@ jobs:
         with:
           prompt: |
             Use Bash to echo "Hello from settings file test"
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY && secrets.ANTHROPIC_API_KEY || secrets.CLAUDE_CREDENTIALS }}
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CREDENTIALS }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           settings: "test-settings.json"
           timeout_minutes: "2"
 
@@ -170,8 +166,7 @@ jobs:
         with:
           prompt: |
             Use Bash to echo "This should not work from file"
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY && secrets.ANTHROPIC_API_KEY || secrets.CLAUDE_CREDENTIALS }}
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CREDENTIALS }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           settings: "test-settings.json"
           timeout_minutes: "2"
 

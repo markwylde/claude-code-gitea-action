@@ -52,7 +52,9 @@ describe("checkWritePermissions", () => {
   });
 
   test("returns true immediately in Gitea environments", async () => {
-    const client = { api: { getBaseUrl: () => "https://gitea.example.com/api/v1" } } as any;
+    const client = {
+      api: { getBaseUrl: () => "https://gitea.example.com/api/v1" },
+    } as any;
     const result = await checkWritePermissions(client, baseContext);
 
     expect(result).toBe(true);
