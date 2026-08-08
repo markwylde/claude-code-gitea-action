@@ -148,7 +148,7 @@ export async function runClaude(promptPath: string, options: ClaudeOptions) {
 
   // Log custom environment variables if any
   const customEnvKeys = Object.keys(config.env).filter(
-    (key) => key !== "CLAUDE_ACTION_INPUTS_PRESENT",
+    (key) => key !== "GITHUB_ACTION_INPUTS",
   );
   if (customEnvKeys.length > 0) {
     console.log(`Custom environment variables: ${customEnvKeys.join(", ")}`);
