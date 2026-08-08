@@ -17,7 +17,7 @@ async function run() {
       promptFile: process.env.INPUT_PROMPT_FILE || "",
     });
 
-    await runClaude(promptConfig.path, {
+    const result = await runClaude(promptConfig.path, {
       allowedTools: process.env.INPUT_ALLOWED_TOOLS,
       disallowedTools: process.env.INPUT_DISALLOWED_TOOLS,
       maxTurns: process.env.INPUT_MAX_TURNS,
@@ -27,7 +27,16 @@ async function run() {
       claudeEnv: process.env.INPUT_CLAUDE_ENV,
       fallbackModel: process.env.INPUT_FALLBACK_MODEL,
       model: process.env.ANTHROPIC_MODEL,
+      pathToClaudeCodeExecutable:
+        process.env.INPUT_PATH_TO_CLAUDE_CODE_EXECUTABLE,
     });
+    core.setOutput("conclusion", result.conclusion);
+    if (result.executionFile) {
+      core.setOutput("execution_file", result.executionFile);
+    }
+    if (result.conclusion === "failure") {
+      process.exit(1);
+    }
   } catch (error) {
     core.setFailed(`Action failed with error: ${error}`);
     core.setOutput("conclusion", "failure");

@@ -22,6 +22,7 @@ export type ClaudeOptions = {
   fallbackModel?: string;
   timeoutMinutes?: string;
   model?: string;
+  pathToClaudeCodeExecutable?: string;
 };
 
 type PreparedConfig = {
@@ -110,6 +111,10 @@ export function prepareRunConfig(
   // Parse custom environment variables
   const customEnv = parseCustomEnvVars(options.claudeEnv);
 
+  if (process.env.INPUT_ACTION_INPUTS_PRESENT) {
+    customEnv.GITHUB_ACTION_INPUTS = process.env.INPUT_ACTION_INPUTS_PRESENT;
+  }
+
   return {
     claudeArgs,
     promptPath,
@@ -142,9 +147,11 @@ export async function runClaude(promptPath: string, options: ClaudeOptions) {
   console.log(`Prompt file size: ${promptSize} bytes`);
 
   // Log custom environment variables if any
-  if (Object.keys(config.env).length > 0) {
-    const envKeys = Object.keys(config.env).join(", ");
-    console.log(`Custom environment variables: ${envKeys}`);
+  const customEnvKeys = Object.keys(config.env).filter(
+    (key) => key !== "GITHUB_ACTION_INPUTS",
+  );
+  if (customEnvKeys.length > 0) {
+    console.log(`Custom environment variables: ${customEnvKeys.join(", ")}`);
   }
 
   // Output to console
@@ -162,7 +169,10 @@ export async function runClaude(promptPath: string, options: ClaudeOptions) {
     pipeStream.destroy();
   });
 
-  const claudeProcess = spawn("claude", config.claudeArgs, {
+  // Use custom executable path if provided, otherwise default to "claude"
+  const claudeExecutable = options.pathToClaudeCodeExecutable || "claude";
+
+  const claudeProcess = spawn(claudeExecutable, config.claudeArgs, {
     stdio: ["pipe", "pipe", "inherit"],
     env: {
       ...process.env,
@@ -294,38 +304,33 @@ export async function runClaude(promptPath: string, options: ClaudeOptions) {
     // Ignore errors during cleanup
   }
 
-  // Set conclusion based on exit code
+  const result: { conclusion: "success" | "failure"; executionFile?: string } =
+    { conclusion: exitCode === 0 ? "success" : "failure" };
+
   if (exitCode === 0) {
-    // Try to process the output and save execution metrics
     try {
       await writeFile("output.txt", output);
-
-      // Process output.txt into JSON and save to execution file
-      const { stdout: jsonOutput } = await execAsync("jq -s '.' output.txt");
+      const { stdout: jsonOutput } = await execAsync("jq -s '.' output.txt", {
+        maxBuffer: 10 * 1024 * 1024,
+      });
       await writeFile(EXECUTION_FILE, jsonOutput);
-
       console.log(`Log saved to ${EXECUTION_FILE}`);
     } catch (e) {
       core.warning(`Failed to process output for execution metrics: ${e}`);
     }
-
-    core.setOutput("conclusion", "success");
-    core.setOutput("execution_file", EXECUTION_FILE);
-  } else {
-    core.setOutput("conclusion", "failure");
-
-    // Still try to save execution file if we have output
-    if (output) {
-      try {
-        await writeFile("output.txt", output);
-        const { stdout: jsonOutput } = await execAsync("jq -s '.' output.txt");
-        await writeFile(EXECUTION_FILE, jsonOutput);
-        core.setOutput("execution_file", EXECUTION_FILE);
-      } catch (e) {
-        // Ignore errors when processing output during failure
-      }
+    result.executionFile = EXECUTION_FILE;
+  } else if (output) {
+    try {
+      await writeFile("output.txt", output);
+      const { stdout: jsonOutput } = await execAsync("jq -s '.' output.txt", {
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      await writeFile(EXECUTION_FILE, jsonOutput);
+      result.executionFile = EXECUTION_FILE;
+    } catch (e) {
+      // Ignore errors when processing output during failure
     }
-
-    process.exit(exitCode);
   }
+
+  return result;
 }

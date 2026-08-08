@@ -66,6 +66,8 @@ export async function prepareMcpConfig({
             REPO_DIR: process.env.GITHUB_WORKSPACE || process.cwd(),
             GITEA_API_URL:
               process.env.GITEA_API_URL || "https://api.github.com",
+            CLAUDE_GIT_NAME: core.getInput("claude_git_name") || "Claude",
+            CLAUDE_GIT_EMAIL: core.getInput("claude_git_email") || "claude@anthropic.com",
           },
         },
       },
